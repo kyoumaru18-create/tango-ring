@@ -56,8 +56,26 @@ button{cursor:pointer}
 .avbtn[aria-current="page"]{box-shadow:0 0 0 2px var(--accent)}
 .avbtn .avdot{position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--margin);border:2px solid var(--paper)}
 @media (max-width:420px){.themebtn{padding:4px 8px}.themebtn .tlabel{display:none}}
-#setHost>details>summary{display:none}
-#setHost>details>.inner{padding-top:16px}
+/* 右からすべり出てくる画面（設定・レベルとテーマ・単語一覧） */
+.drawer-bg{position:fixed;inset:0;background:rgba(10,14,30,.45);opacity:0;transition:opacity .28s ease;z-index:70}
+.drawer-bg.open{opacity:1}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,90vw);background:var(--paper);z-index:71;display:flex;flex-direction:column;
+  transform:translateX(104%);transition:transform .32s cubic-bezier(.2,.85,.25,1);box-shadow:-12px 0 40px var(--shadow);border-left:3px solid var(--accent)}
+.drawer.open{transform:none}
+.drawer-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top));border-bottom:1px solid var(--line);background:var(--card)}
+.drawer-hd b{font-size:18px;letter-spacing:.04em}
+.drawer-x{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:18px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.drawer-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.drawer-body>details{border:0;background:none}
+.drawer-body>details>summary{display:none}
+.drawer-body>details>.inner{padding:0}
+body.noscroll{overflow:hidden}
+#tab-cards>#setBox,#tab-cards>#lvBox{display:none}   /* 設定・レベルとテーマは右から出す画面でだけ開く */
+#tab-words>#listBox>summary{display:none}
+#tab-words>#listBox>.inner{padding-top:16px}
+#tab-words .wlist{max-height:none;overflow:visible}
+#listSum b{font-size:20px}
+#listSum small{font-size:12px}
 .sethd{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .stats{display:flex;gap:6px;flex-wrap:wrap}
 .stat{display:flex;align-items:baseline;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;color:var(--muted)}
@@ -292,7 +310,7 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .tl .tlt{font-size:12.5px;fill:var(--muted);text-anchor:middle;font-family:var(--f-body)}
 .tl .tlnow{fill:var(--ink);font-weight:700}
 .dftip{border:1px dashed var(--accent);border-radius:12px;padding:12px 16px;font-size:14px}
-.tabs .in{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:560px}
+.tabs .in{display:grid;grid-template-columns:repeat(6,1fr);width:100%;max-width:560px}
 .tabs button{position:relative;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:11px;color:var(--muted);min-height:52px}
 .tabs svg{width:22px;height:22px}
 .badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--margin);color:#fff;font:500 10px/18px var(--f-mono);text-align:center}
@@ -451,10 +469,23 @@ details.flash{animation:flash 1.2s ease}
           <div class="note">使いにくいところ、ほしい機能、よかったところなど、なんでも教えてください。単語や説明の間違いは、それぞれの横の「間違いを報告」から送れます。</div>
           <button class="btn" id="fbBtn" type="button" style="align-self:flex-start">感想・要望を送る</button>
         </div>
+        <details id="repBox" hidden>
+          <summary id="repSum">届いた報告・感想</summary>
+          <div class="inner">
+            <div class="row" style="justify-content:space-between"><div class="seg" id="repMode"></div><button class="linkbtn" id="repReload" type="button">読み込み直す</button></div>
+            <div id="repList"></div>
+            <div class="note" style="font-size:12px">この欄は、作った人（あなた）にだけ見えています。</div>
+          </div>
+        </details>
       </div>
     </details>
-    <details id="addBox">
-      <summary><span class="sumtxt"><b>単語を増やす</b><small>AIにテーマで作ってもらう ・ 自分で追加</small></span></summary>
+  </section>
+
+  <!-- WORDS（単語一覧と、単語を追加） -->
+  <section id="tab-words" class="tabpane" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div id="listSum"></div>
+    <details id="addBox" class="addbox">
+      <summary><span class="sumtxt"><b>＋ 単語を追加</b><small>AIにテーマで作ってもらう ・ 自分で追加</small></span></summary>
       <div class="inner">
         <div class="label">AIにテーマで作ってもらう</div>
         <div class="row" style="flex-wrap:nowrap">
@@ -479,8 +510,8 @@ details.flash{animation:flash 1.2s ease}
         <div id="addMsg" class="note"></div>
       </div>
     </details>
-    <details id="listBox">
-      <summary id="listSum">単語一覧</summary>
+    <details id="listBox" open>
+      <summary>単語一覧</summary>
       <div class="inner">
         <input type="text" id="listQ" placeholder="検索" aria-label="単語を検索">
         <div class="seg" id="listMode" style="align-self:flex-start"></div>
@@ -489,20 +520,6 @@ details.flash{animation:flash 1.2s ease}
         <div class="note">● の数が覚え具合。5つ以上で「定着」としてカウントします。</div>
       </div>
     </details>
-    <details id="repBox" hidden>
-      <summary id="repSum">届いた報告・感想</summary>
-      <div class="inner">
-        <div class="row" style="justify-content:space-between"><div class="seg" id="repMode"></div><button class="linkbtn" id="repReload" type="button">読み込み直す</button></div>
-        <div id="repList"></div>
-        <div class="note" style="font-size:12px">この欄は、作った人（あなた）にだけ見えています。</div>
-      </div>
-    </details>
-  </section>
-
-  <!-- SETTINGS（右上のボタンから開く。中身は設定のパネルを起動時にここへ移す） -->
-  <section id="tab-settings" class="tabpane" hidden style="display:flex;flex-direction:column;gap:12px">
-    <div class="sethd"><div style="font-size:20px;font-weight:700">設定</div><button class="btn" id="setBack" type="button">← もどる</button></div>
-    <div id="setHost"></div>
   </section>
 
   <!-- QUIZ -->
@@ -579,12 +596,19 @@ details.flash{animation:flash 1.2s ease}
 <nav class="tabs" aria-label="モード">
   <div class="in">
     <button data-tab="cards" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="15" height="12" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v10"/><circle cx="6.5" cy="9.5" r="1"/></svg>カード</button>
+    <button data-tab="words"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 0 2 2h13v-3"/><path d="M8 8h7M8 11.5h5"/></svg>単語</button>
     <button data-tab="quiz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9l2 2 4-4M8 15h8"/></svg>クイズ</button>
     <button data-tab="listen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>リスニング</button>
     <button data-tab="diff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6"/><circle cx="12" cy="3.5" r="1.5"/></svg>使い分け</button>
     <button data-tab="talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>AI英会話</button>
   </div>
 </nav>
+
+<div class="drawer-bg" id="drawerBg" hidden></div>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="drawer-hd"><b id="drawerTitle"></b><button class="drawer-x" id="drawerClose" type="button" aria-label="閉じる">✕</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
 
 <dialog class="rep" id="repDlg" aria-labelledby="repTitle">
   <div class="repin">
@@ -4237,7 +4261,7 @@ function bindSess(){const b=$("#missAgain");if(b)b.onclick=()=>startCram(Object.
 // 新しい単語を n 語選ぶ：自分で追加した単語を先に、あとは選んだレベルから順番に1語ずつ（どのレベルの単語も出るように）
 function pickFresh(n,skip=[]){
   const fresh=allWords().filter(w=>!state.cards[w.id]&&inLevel(w)&&!skip.includes(w.id)),nw=fresh.filter(w=>!w.lv).slice(0,n);
-  const pools=state.levels.map(l=>fresh.filter(w=>w.lv===l));
+  const pools=state.levels.map(l=>shuffle(fresh.filter(w=>w.lv===l)));   // 各レベルの中はランダムに（2026-10-15。前はデータの並び順で、誰でも同じ単語から始まっていた）
   for(let i=0;nw.length<n&&pools.some(p=>i<p.length);i++)for(const p of pools)if(i<p.length&&nw.length<n)nw.push(p[i]);
   return nw;
 }
@@ -4257,8 +4281,10 @@ const ratioPool=()=>ratioWords().map(w=>w.id).concat(ratioFresh)
   .concat(ratioWords().filter(w=>{const r=state.rev[w.id];return r&&(r.box||r.due<=dayNum())}).map(w=>"r:"+w.id));
 // 出やすさ：覚えていない単語（60%未満）ほど高い。覚えた単語は、次に出す日（due）が来るまでは出にくく、
 // 日が来たら出やすくする（忘れかけたころに戻ってくる）。まだ見ていない単語は 0.8
+// 苦手な単語（60%未満）は WEAK_W 倍にして、出すぎないようにする（2026-10-15。失敗した単語ばかり続くと言われたため。1.0 → 0.65）
+const WEAK_W=0.65;
 function ratioWeight(q){const c=storeOf(q)[wid(q)];if(!c)return 0.8;
-  const m=mNow(c),base=0.03+Math.pow(1-m,2);if(m<0.6)return base;
+  const m=mNow(c),base=0.03+Math.pow(1-m,2);if(m<0.6)return 0.03+WEAK_W*Math.pow(1-m,2);
   return dayNum()>=(c.due??0)?base+0.4:base*0.3}
 function pickRatio(){
   const pool=ratioPool();if(!pool.length)return null;
@@ -4484,7 +4510,7 @@ function grade(g){
 }
 function renderList(){
   $("#listSum").innerHTML=`<span class="sumtxt"><b>単語一覧</b><small>${allWords().length}語 ・ 検索、苦手な単語、定着した単語</small></span>`;
-  if(!$("#listBox").open)return;  // 閉じているときは中身を作らない（3,000語以上あるので、答えるたびに作り直すと重い）
+  if($("#tab-words").hidden)return;  // 単語タブを開いていないときは中身を作らない（3,000語以上あるので、答えるたびに作り直すと重い）
   // 絞り込み：すべて／苦手（2回以上忘れた）／定着（BOX 5以上。覚え具合の高い順）
   const q=($("#listQ").value||"").trim().toLowerCase(),weak=weakWords();
   const mastered=allWords().filter(w=>boxOf(w)>=MASTER).sort((a,b)=>boxOf(b)-boxOf(a));
@@ -4547,26 +4573,38 @@ $("#addForm").onsubmit=e=>{e.preventDefault();const n=addWords([{w:$("#fW").valu
   $("#addMsg").textContent=n?"追加しました。カードの最後に入っています。":"すでにある単語です。";if(n)e.target.reset()};
 let listMode="all";
 $("#listQ").oninput=renderList;$("#listBox").ontoggle=renderList;$("#listTheme").onchange=renderList;
-function openList(mode){listMode=mode;renderList();$("#listBox").open=true;$("#listBox").scrollIntoView({block:"start",behavior:"smooth"})}
-// カードの上のボタン：今のレベル・テーマと設定を見せ、押すとその欄をボタンのすぐ下に開く（下の欄に気づかない人が多かったため）
-// 下まで動かされるのは面倒なので、欄そのものをボタンの下へ移し、閉じたら元の場所に戻す
-const panelHome={};let qbOpen=null;
-function openPanel(id){const d=$("#"+id);
-  if(qbOpen===id&&d.open){d.open=false;return}            // もう一度押すと閉じる
-  if(qbOpen&&qbOpen!==id){const p=$("#"+qbOpen);p.open=false;panelHome[qbOpen].after(p)}
-  if(!panelHome[id]){const ph=document.createComment(id);d.before(ph);panelHome[id]=ph;
-    d.addEventListener("toggle",()=>{if(!d.open&&qbOpen===id){qbOpen=null;panelHome[id].after(d);renderQuickbar()}})}
-  $("#quickbar").after(d);qbOpen=id;d.open=true;renderQuickbar();
-  d.classList.remove("flash");void d.offsetWidth;d.classList.add("flash")}
+function openList(mode){listMode=mode;showTab("words")}   // 記録の「定着した単語 ›」から
+/* ---------- 右からすべり出てくる画面（ドロワー） ----------
+   設定・レベルとテーマ・単語一覧は、カードの上に重ねて右から出す（開くたびにカードの画面が上下に動いて落ち着かない、と言われたため）。
+   パネル（details）そのものをドロワーの中へ移して開き、閉じたら元の場所（コメントの目印）に戻す */
+const panelHome={},DRAWER_TITLE={setBox:"設定",lvBox:"レベルとテーマ",listBox:"単語一覧"};let qbOpen=null,drawerTimer=null;
+function openPanel(id){
+  if(qbOpen===id){closeDrawer();return}            // もう一度押すと閉じる
+  const d=$("#"+id);if(!d)return;
+  clearTimeout(drawerTimer);
+  [...$("#drawerBody").children].forEach(el=>{if(el.id!==id&&panelHome[el.id]){el.open=false;panelHome[el.id].after(el)}});   // 前に出していたパネルは元の場所へ
+  if(!panelHome[id]){const ph=document.createComment(id);d.before(ph);panelHome[id]=ph}
+  clearTimeout(drawerTimer);$("#drawerBody").appendChild(d);d.open=true;qbOpen=id;
+  $("#drawerTitle").textContent=DRAWER_TITLE[id]||"";$("#drawerBody").scrollTop=0;
+  $("#drawerBg").hidden=false;$("#drawer").hidden=false;void $("#drawer").offsetWidth;
+  $("#drawer").classList.add("open");$("#drawerBg").classList.add("open");document.body.classList.add("noscroll");
+  renderQuickbar();renderAvatar();$("#drawerClose").focus({preventScroll:true});
+}
+function closeDrawer(){
+  if(!qbOpen)return;const was=qbOpen;
+  $("#drawer").classList.remove("open");$("#drawerBg").classList.remove("open");document.body.classList.remove("noscroll");
+  qbOpen=null;renderQuickbar();renderAvatar();
+  // すべって消えてから、パネルを元の場所に戻す
+  drawerTimer=setTimeout(()=>{if(qbOpen)return;const d=$("#"+was);d.open=false;panelHome[was].after(d);$("#drawer").hidden=true;$("#drawerBg").hidden=true},280);
+}
 function renderQuickbar(){const el=$("#quickbar");if(!el)return;
   el.hidden=!helloDone&&!Object.keys(state.cards).length;   // 初回の案内の間は出さない
   const lv=state.levels.map(l=>LEVELS[l].name).join("・"),th=state.themes.length===THEME_KEYS.length?"":"テーマ"+state.themes.length+"つ";   // スマホで2行に収まるよう短く
   el.innerHTML=`<button class="qb qt" type="button" id="qtBtn" ${qt?'aria-pressed="true"':""}>⏱ ${qt?"3分 実行中":"3分だけ"}</button>`
-    +`<button class="qb" type="button" data-open="lvBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg>レベル・テーマ<small>${esc(lv)}${th?" ／ "+th:""}</small></button>`
-    +`<button class="qb" type="button" data-open="listBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>単語一覧</button>`;
+    +`<button class="qb" type="button" data-open="lvBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg>レベル・テーマ<small>${esc(lv)}${th?" ／ "+th:""}</small></button>`;
   el.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(qbOpen===b.dataset.open));b.onclick=()=>openPanel(b.dataset.open)});
   // 押したらすぐ始めず、スタートの画面を出す
-  $("#qtBtn").onclick=()=>{if(qbOpen)$("#"+qbOpen).open=false;if(!qt){qtReady=true;renderCards()}window.scrollTo(0,0)};
+  $("#qtBtn").onclick=()=>{closeDrawer();if(!qt){qtReady=true;renderCards()}window.scrollTo(0,0)};
 }
 let setDraft=null;
 function applyCardSettings(){
@@ -4619,7 +4657,7 @@ $("#autoSpk").onchange=()=>{state.autoSpeak=$("#autoSpk").checked;spokenQ=null;s
 // パソコンのキー操作：スペース／Enterでめくる、←（1）浮かばなかった、→（2）浮かんだ
 document.addEventListener("keydown",e=>{
   if($("#tab-cards").hidden||e.metaKey||e.ctrlKey||e.altKey||!queue.length||!helloDone&&!Object.keys(state.cards).length)return;
-  if($("#repDlg").open||(ratioBreak&&!cram)||qtDone||qtBye||qtReady||qtPause!==null)return;   // 報告の画面・結果の画面ではカードを動かさない
+  if($("#repDlg").open||qbOpen||(ratioBreak&&!cram)||qtDone||qtBye||qtReady||qtPause!==null)return;   // 報告の画面・結果の画面ではカードを動かさない
   const t=e.target,tag=(t.tagName||"").toLowerCase();
   if(tag==="textarea"||tag==="select"||tag==="summary"||(tag==="input"&&t.id!=="revIn")||(tag==="button"&&!["flipBtn","icard"].includes(t.id)&&!t.dataset.g))return;
   if(!flipped&&(e.key==="Enter"||e.key===" "&&tag!=="input")){e.preventDefault();doFlip()}
@@ -4791,7 +4829,7 @@ function renderQuiz(){
 }
 // パソコン：1〜4キーで選択肢、Enterで次へ（クイズのタブで、入力欄にいないとき）
 document.addEventListener("keydown",e=>{
-  if($("#tab-quiz").hidden||!quiz||!quiz.qs||e.metaKey||e.ctrlKey||e.altKey||$("#repDlg").open)return;
+  if($("#tab-quiz").hidden||!quiz||!quiz.qs||e.metaKey||e.ctrlKey||e.altKey||$("#repDlg").open||qbOpen)return;
   const tag=(e.target.tagName||"").toLowerCase();if(tag==="input"||tag==="textarea"||tag==="select")return;
   const q=quiz.qs[quiz.i];if(!q||quiz.ready||quiz.paused)return;
   if(q.pick===null&&/^[1-4]$/.test(e.key)){const o=q.opts[+e.key-1];if(o){e.preventDefault();answerQuiz(o.id)}}
@@ -5763,25 +5801,20 @@ $("#repBox").ontoggle=renderReports;
 $("#repReload").onclick=()=>{repAll=null;renderReports();loadReports()};
 
 /* ---------- tabs ---------- */
-let curTab="cards",prevTab="cards";
 function showTab(t){
-  if(t!==curTab){if(t==="settings")prevTab=curTab;
-    if(curTab==="settings"){setDraft=null;$("#setDone").textContent="";renderSettings()}   // 設定の画面を出たら、更新していない選びかけは捨てる
-    curTab=t}
-  $("#avBtn").toggleAttribute("aria-current",false);
-  if(t==="settings"){$("#avBtn").setAttribute("aria-current","page");try{if(!localStorage.getItem(LS+"-setseen")){localStorage.setItem(LS+"-setseen","1");renderAvatar()}}catch(e){}}
+  closeDrawer();
   document.querySelectorAll(".tabpane").forEach(s=>s.hidden=s.id!=="tab-"+t);
   document.querySelectorAll(".tabs [data-tab]").forEach(b=>b.toggleAttribute("aria-current",false)||b.dataset.tab===t&&b.setAttribute("aria-current","page"));
   if(newTabs.includes(t)){newTabs=newTabs.filter(x=>x!==t);try{localStorage.setItem(LS+"-newtab",JSON.stringify(newTabs))}catch(e){}updNewDots()}
   if(t!=="cards"&&unlockNote){unlockNote=false;renderCards()}
   if(t!=="quiz"&&qTimer)pauseQuiz();   // スピードの途中でほかのタブに移ったら、一時停止にしておく
   if(t!=="cards"&&qt&&qtPause===null)pauseQt();   // 3分だけも同じ
-  if(t==="quiz"&&(!quiz||quiz.empty))startQuiz();else if(t==="quiz"&&quiz.mode==="speed")renderQuiz();if(t==="listen"&&!ls.w)nextListen();if(t==="diff")renderDfMode();
-  if(t!=="settings")try{localStorage.setItem(LS+"-tab",t)}catch(e){}
+  if(t==="quiz"&&(!quiz||quiz.empty))startQuiz();else if(t==="quiz"&&quiz.mode==="speed")renderQuiz();if(t==="listen"&&!ls.w)nextListen();if(t==="diff")renderDfMode();if(t==="words")renderList();
+  try{localStorage.setItem(LS+"-tab",t)}catch(e){}
   window.scrollTo(0,0);
 }
-/* ---------- 右上のボタン：設定の画面（アカウントもここ） ----------
-   設定はカードの下にあって気づかれにくく、ログインも見つけにくかったので、右上の丸いボタンから開く画面にした。
+/* ---------- 右上のボタン：設定（アカウントもここ）を右から出す ----------
+   設定はカードの下にあって気づかれにくく、ログインも見つけにくかったので、右上の丸いボタンから開くようにした。
    ログイン中は、名前の1文字目（漢字・ひらがなもそのまま）を色つきの丸に出す */
 const GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 const PERSON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
@@ -5794,11 +5827,12 @@ function renderAvatar(){
   else{b.className="avbtn";b.style.background="";let seen=true;try{seen=!!localStorage.getItem(LS+"-setseen")}catch(e){}   // 赤い点は、設定の画面を一度開くまで（ログインがあると気づいてもらうため）
     b.innerHTML=CAN_CLOUD?PERSON+(seen?"":'<span class="avdot" aria-hidden="true"></span>'):GEAR;
     b.setAttribute("aria-label",CAN_CLOUD?"設定・ログイン":"設定");b.title=CAN_CLOUD?"設定・ログイン":"設定"}
-  if(curTab==="settings")b.setAttribute("aria-current","page");
+  b.setAttribute("aria-expanded",String(qbOpen==="setBox"));
 }
-$("#setHost").appendChild($("#setBox"));$("#setBox").open=true;   // 設定のパネルを、設定の画面に移していつも開いておく
-$("#avBtn").onclick=()=>showTab(curTab==="settings"?prevTab:"settings");
-$("#setBack").onclick=()=>showTab(prevTab);
+$("#avBtn").onclick=()=>{openPanel("setBox");try{if(!localStorage.getItem(LS+"-setseen")){localStorage.setItem(LS+"-setseen","1");renderAvatar()}}catch(e){}};
+$("#drawerClose").onclick=closeDrawer;$("#drawerBg").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&qbOpen&&!$("#repDlg").open){e.preventDefault();closeDrawer()}},true);   // Esc でも閉じる
+$("#setBox").addEventListener("toggle",()=>{$("#setDone").textContent="";renderSettings()});   // 閉じたら、更新していない選びかけは捨てる
 renderAvatar();
 document.querySelectorAll(".tabs [data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 $("#stats").onclick=()=>{recOpen=!recOpen;renderStats()};
@@ -5842,7 +5876,7 @@ checkUnlock(true);buildQueue();renderScen();renderAll();updNewDots();
 samplePromise.then(s=>{if(!s)aiOff=true});
 repCtx().then(r=>{if(r&&r.owner)loadReports()});
 let startTab="cards";try{startTab=localStorage.getItem(LS+"-tab")||"cards"}catch(e){}
-showTab(["cards","quiz","listen","diff","talk"].includes(startTab)?startTab:"cards");
+showTab(["cards","words","quiz","listen","diff","talk"].includes(startTab)?startTab:"cards");
 initDb();initCloud();
 </script>
 
