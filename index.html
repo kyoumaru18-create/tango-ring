@@ -311,6 +311,8 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .qtbar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:14px}
 .qtbar b{font-family:var(--f-mono);font-size:16px;color:var(--accent)}
 .qtbar.over b{color:var(--good)}
+.gbtn{align-self:flex-start;display:inline-flex;gap:10px;align-items:center;background:#fff;color:#1f1f1f;border:1px solid #747775;font-weight:500}
+.gbtn svg{width:18px;height:18px;flex:none}
 .chip.used{background:var(--good-bg);color:var(--good)}
 .stat.goalok{border-color:var(--good);color:var(--good)}
 .stat.goalok b{color:var(--good)}
@@ -382,6 +384,10 @@ details.flash{animation:flash 1.2s ease}
     <details id="setBox">
       <summary><span class="sumtxt"><b>設定</b><small id="setSum"></small></span></summary>
       <div class="inner">
+        <div class="setgroup" id="acctGroup" hidden>
+          <div class="sethead">アカウント</div>
+          <div id="acctBody" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
         <div class="setgroup">
           <div class="sethead">カードの出し方</div>
           <div class="setitem">
@@ -4034,6 +4040,61 @@ async function initDb(){
     dbRef=ref;setSync("アカウントに保存済み");if((state.updated||0)>((snap.exists&&snap.data().updated)||0))pushDb();
   }catch(e){}
 }
+
+/* ---------- Googleでログイン（GitHub Pages 版だけ。Supabase を使う） ----------
+   ログインすると、進み具合を Supabase の progress 表（1人1行、本人しか読み書きできない）に保存する。
+   開いたときとログインしたときに、端末の進み具合とアカウントの進み具合を合わせる（どちらも消さない）。
+   ログインしない人は、今までどおり端末にだけ保存する。URL とキーは公開してよい値（秘密のキーは使わない） */
+const SB_URL="https://lokbaszrekbnxpbviaja.supabase.co",SB_KEY="sb_publishable_q9sWLTOaeSm2Fm-y-LgcLA_PTAmoN5x";
+const SB_JS="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js";
+const CAN_CLOUD=!ON_CLAUDE&&/^https:|^http:\/\/localhost/.test(location.href);
+let sb=null,sbUser=null,acctMsg="",acctBusy=false;
+// 2つの進み具合を合わせる：単語ごとに、あとで答えたほう（同じ日なら回数の多いほう）を残す。日ごとの枚数は多いほう。設定は新しいほう
+function mergeState(a,b){
+  const nw=(a.updated||0)>=(b.updated||0)?a:b,od=nw===a?b:a;
+  const pick=(x,y)=>!x?y:!y?x:((x.last??-1)>(y.last??-1)||(x.last??-1)===(y.last??-1)&&(x.seen||0)>=(y.seen||0))?x:y;
+  const mm=(p,q)=>{const o={...q};for(const k in p)o[k]=pick(p[k],q[k]);return o};
+  const days={...od.days};for(const d in nw.days)days[d]=Math.max(days[d]||0,nw.days[d]||0);
+  const seen=new Set(),custom=[...nw.custom,...od.custom].filter(w=>{const k=String(w.w).toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
+  const ut={...(od.usedTalk||{})};for(const k in nw.usedTalk||{})ut[k]=Math.max(ut[k]||0,nw.usedTalk[k]);
+  const sbst={...(od.speedBest||{})};for(const k in nw.speedBest||{}){const x=nw.speedBest[k],y=sbst[k];if(!y||x.score>y.score||x.score===y.score&&x.avg<y.avg)sbst[k]=x}
+  return normalize({...nw,cards:mm(nw.cards,od.cards),rev:mm(nw.rev,od.rev),days,custom,gram:{...(od.gram||{}),...(nw.gram||{})},usedTalk:ut,speedBest:sbst,unlocked:nw.unlocked||od.unlocked,updated:Math.max(a.updated||0,b.updated||0)});
+}
+const loadScript=src=>new Promise((ok,ng)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
+async function initCloud(){
+  if(!CAN_CLOUD)return;renderAcct();
+  try{await loadScript(SB_JS);sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:"pkce",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}
+  catch(e){acctMsg="ログインの準備ができませんでした（電波のないところでは使えません）。";renderAcct();return}
+  sb.auth.onAuthStateChange((ev,s)=>{const u=s&&s.user||null;if((u&&u.id)===(sbUser&&sbUser.id))return;sbUser=u;
+    if(sbUser)setTimeout(cloudSync,0);else{dbRef=null;setSync("この端末に保存")}renderAcct()});
+  try{const {data}=await sb.auth.getSession();if(data&&data.session&&!sbUser){sbUser=data.session.user;cloudSync()}}catch(e){}
+  // ログインから戻ってきたときの ?code=… をアドレスから消す
+  if(/[?&]code=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}
+  renderAcct();
+}
+async function cloudSync(){
+  if(!sb||!sbUser)return;setSync("同期中…");
+  try{
+    const {data,error}=await sb.from("progress").select("data").eq("user_id",sbUser.id).maybeSingle();if(error)throw error;
+    if(data&&data.data){state=mergeState(state,normalize(JSON.parse(JSON.stringify(data.data))));try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}checkUnlock(true);buildQueue();renderAll()}
+    dbRef={set:async d=>{const {error}=await sb.from("progress").upsert({user_id:sbUser.id,data:d,updated_at:new Date().toISOString()});if(error)throw error}};
+    await pushDb();
+  }catch(e){setSync("保存待ち…");acctMsg="アカウントとの同期に失敗しました。少し待って開き直してください。";renderAcct()}
+}
+function renderAcct(){
+  const g=$("#acctGroup");if(!g)return;g.hidden=!CAN_CLOUD;if(!CAN_CLOUD)return;
+  const name=sbUser?(sbUser.email||(sbUser.user_metadata||{}).name||"ログイン中"):"";
+  $("#acctBody").innerHTML=sbUser
+    ?`<div class="note" style="margin:0">ログイン中：<b>${esc(name)}</b><br>進み具合はアカウントに保存されます。ほかのスマホやパソコンでも、同じアカウントでログインすれば続きからできます。</div>
+      <button class="linkbtn" id="acctOut" type="button" style="align-self:flex-start">ログアウト</button>`
+    :`<div class="note" style="margin:0">ログインすると、スマホとパソコンで同じ進み具合を使えます。ブラウザのデータを消しても消えません。今この端末にある進み具合は、そのまま引き継がれます。ログインしなくても使えます。</div>
+      <button class="btn gbtn" id="acctIn" type="button" ${sb&&!acctBusy?"":"disabled"}><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Googleでログイン</button>`;
+  $("#acctBody").insertAdjacentHTML("beforeend",`${acctMsg?`<div class="err">${esc(acctMsg)}</div>`:""}<div class="note" style="font-size:12px;margin:0"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent)">プライバシーポリシー</a></div>`);
+  const i=$("#acctIn");if(i)i.onclick=async()=>{if(!sb)return;acctBusy=true;acctMsg="";renderAcct();
+    const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});
+    if(error){acctBusy=false;acctMsg="ログインを始められませんでした。少し待ってからもう一度どうぞ。";renderAcct()}};
+  const o=$("#acctOut");if(o)o.onclick=async()=>{try{await sb.auth.signOut()}catch(e){}sbUser=null;dbRef=null;setSync("この端末に保存");acctMsg="ログアウトしました。この端末の進み具合はそのまま残っています。";renderAcct()};
+}
 const allWords=()=>BASE.concat(state.custom);
 const boxOf=w=>(state.cards[w.id]?state.cards[w.id].box:0);
 function dotsHtml(box){let h='<span class="dots" aria-label="覚え具合 '+box+'/6">';for(let i=1;i<=6;i++)h+='<i class="'+(i<=box?"on":"")+'"></i>';return h+"</span>"}
@@ -4244,7 +4305,7 @@ function renderHello(area){
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」「設定」</b>ボタンからいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
     <div class="note" style="font-size:12px">${ON_CLAUDE?"AIの機能（ニュアンス・使い分け・AI英会話）は、claude.ai にログインして開くと使えます。ログインしていなくても、カード・クイズ・リスニングは使えます。"
-      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（ブラウザのデータを消すと消えます）。スマホなら、設定の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
+      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（設定から Google でログインすると、ほかの端末でも続きができて、消えなくなります）。スマホなら、設定の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
   </div>`;
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
@@ -5739,7 +5800,7 @@ samplePromise.then(s=>{if(!s)aiOff=true});
 repCtx().then(r=>{if(r&&r.owner)loadReports()});
 let startTab="cards";try{startTab=localStorage.getItem(LS+"-tab")||"cards"}catch(e){}
 showTab(["cards","quiz","listen","diff","talk"].includes(startTab)?startTab:"cards");
-initDb();
+initDb();initCloud();
 </script>
 
 </body>
