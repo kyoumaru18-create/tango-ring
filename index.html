@@ -311,6 +311,9 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .qtbar{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--soft);border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:14px}
 .qtbar b{font-family:var(--f-mono);font-size:16px;color:var(--accent)}
 .qtbar.over b{color:var(--good)}
+.chip.used{background:var(--good-bg);color:var(--good)}
+.stat.goalok{border-color:var(--good);color:var(--good)}
+.stat.goalok b{color:var(--good)}
 /* できるようになったお知らせ */
 .unlock{display:flex;flex-direction:column;gap:8px;border:1px solid var(--good);background:var(--good-bg);border-radius:12px;padding:12px 14px}
 .unlock b{color:var(--good)}
@@ -391,6 +394,11 @@ details.flash{animation:flash 1.2s ease}
             <div class="dfchips" id="npdSeg"></div>
             <div class="note" id="npdNote"></div>
           </div>
+          <div class="setitem">
+            <div class="setname">1日の目標</div>
+            <div class="dfchips" id="goalSeg"></div>
+            <div class="note" id="goalNote"></div>
+          </div>
           <button class="btn primary" id="setApply" type="button" disabled>この設定で更新する</button>
           <div class="note" id="setDone" style="color:var(--good)"></div>
         </div>
@@ -415,6 +423,12 @@ details.flash{animation:flash 1.2s ease}
         <div class="setgroup">
           <div class="sethead">パソコンのキー操作</div>
           <div class="note">スペースキーでめくる ・ ←（1）浮かばなかった ・ →（2）浮かんだ</div>
+        </div>
+        <div class="setgroup" id="pwaGroup" hidden>
+          <div class="sethead">ホーム画面に追加</div>
+          <div class="note">スマホのホーム画面に置くと、アプリのようにアイコンから開けます。一度開いたあとは、電波がなくても使えます。</div>
+          <button class="btn" id="pwaBtn" type="button" style="align-self:flex-start" hidden>ホーム画面に追加する</button>
+          <div class="note" id="pwaHow"></div>
         </div>
         <div class="setgroup">
           <div class="sethead">作った人に送る</div>
@@ -825,7 +839,7 @@ const BASE=[
 ["vague", "adj", "あいまいな", "His instructions were vague.", "彼の指示はあいまいだった。", 2, "society"],
 ["abundant", "adj", "豊富な", "The region has abundant water.", "その地域は水が豊富だ。", 2, "society"],
 ["accommodate", "verb", "収容する、対応する", "The hall can accommodate 500 people.", "ホールは500人収容できる。", 3, "daily"],
-["deduct", "verb", "差し引く", "Tax is deducted from your salary.", "税金は給料から差し引かれる。", 4, "money"],
+["deduct", "verb", "差し引く", "Tax is deducted from your salary.", "税金は給料から差し引かれる。", 3, "money"],
 ["convey", "verb", "伝える", "It's hard to convey my feelings in English.", "英語で気持ちを伝えるのは難しい。", 2, "daily"],
 ["collaborate", "verb", "協力する", "We collaborated with a local company.", "地元企業と協力した。", 4, "work"],
 ["drawback", "noun", "欠点", "The main drawback is the price.", "主な欠点は値段だ。", 4, "work"],
@@ -1679,7 +1693,7 @@ const BASE=[
 ["customer", "noun", "客、顧客", "The customer is always right.", "お客様は神様です。", 1, "money"],
 ["counter", "noun", "カウンター、売り場", "Please pay at the counter.", "カウンターでお支払いください。", 3, "money"],
 ["price tag", "phrase", "値札", "There's no price tag on this.", "これには値札が付いていない。", 2, "money"],
-["installment", "noun", "分割払い（の1回分）", "Can I pay in monthly installments?", "月々の分割で払えますか？", 4, "money"],
+["installment", "noun", "分割払い（の1回分）", "Can I pay in monthly installments?", "月々の分割で払えますか？", 3, "money"],
 ["headache", "noun", "頭痛", "I have a terrible headache.", "ひどい頭痛がする。", 1, "health"],
 ["stomachache", "noun", "腹痛", "I have a stomachache.", "お腹が痛い。", 1, "health"],
 ["sore throat", "phrase", "のどの痛み", "I have a sore throat.", "のどが痛い。", 1, "health"],
@@ -3988,7 +4002,8 @@ const spk=t=>`<button class="spk" type="button" data-say="${esc(t)}" aria-label=
 /* ---------- state ---------- */
 // cards：英→日カード、rev：日→英カード（どちらも 単語id → {box,due,seen,lapse}）
 // newPerDay：1回に出す新しい単語の数（1日の上限ではない）、autoSpeak：カードの発音を自動で流すか。どちらもアカウントに保存される
-function freshState(){return {v:1,cards:{},rev:{},custom:[],days:{},levels:[1,2],themes:THEME_KEYS.slice(),newPerDay:NEW_PER_DAY,newMix:"mid",showIpa:true,autoSpeak:false,speechRate:1,updated:0}}
+// goal：1日の目標の枚数（0はなし）、usedTalk：AI英会話で使えた単語（単語id → 回数）
+function freshState(){return {v:1,cards:{},rev:{},custom:[],days:{},levels:[1,2],themes:THEME_KEYS.slice(),newPerDay:NEW_PER_DAY,newMix:"mid",goal:20,usedTalk:{},showIpa:true,autoSpeak:false,speechRate:1,updated:0}}
 function normalize(s){const f=freshState();if(!s||typeof s!=="object")return f;const lv=Array.isArray(s.levels)?s.levels.filter(x=>LEVELS[x]):[];const {newDays,revDays,pace,order,...r}=s;return {...f,...r,cards:s.cards||{},rev:s.rev||{},custom:Array.isArray(s.custom)?s.custom:[],days:s.days||{},levels:lv.length?lv:[1,2],themes:(Array.isArray(s.themes)?s.themes.filter(t=>THEMES[t]):[]).length?s.themes.filter(t=>THEMES[t]):THEME_KEYS.slice()}}
 const inLevel=w=>(!w.lv||state.levels.includes(w.lv))&&(!w.cat||state.themes.includes(w.cat));  // 出題範囲＝選んだレベル×選んだテーマ
 const NPD_CHOICES=[5,8,12,15,30,50,100];
@@ -3996,6 +4011,9 @@ const npd=()=>NPD_CHOICES.includes(state.newPerDay)?state.newPerDay:NEW_PER_DAY;
 // 新しい単語の多さ：カードのうち、だいたいこの割合で「はじめての単語」を出す（残りは苦手・忘れかけの単語）
 const NEW_MIX={low:{p:0.15,name:"少なめ",note:"7枚に1枚くらい"},mid:{p:0.3,name:"ふつう",note:"3枚に1枚くらい"},high:{p:0.5,name:"多め",note:"2枚に1枚くらい"}};
 const newMix=()=>NEW_MIX[state.newMix]?state.newMix:"mid";
+// 1日の目標：終わりのない作りなので「今日はここまでやればOK」の目安を出す
+const GOAL_CHOICES=[0,10,20,30,50,100];
+const goalN=()=>GOAL_CHOICES.includes(state.goal)?state.goal:20;
 function loadLocal(){try{const r=localStorage.getItem(LS);return r?normalize(JSON.parse(r)):null}catch(e){return null}}
 let state=loadLocal()||freshState();
 let dbRef=null,saveTimer=null,saving=false,again=false;
@@ -4077,7 +4095,8 @@ function renderStats(){
   // 直近7日の枚数を小さな棒で（今日だけ濃い色）
   const wk=[0,1,2,3,4,5,6].map(i=>t-6+i),mx=Math.max(10,...wk.map(d=>state.days[d]||0)),DOW="日月火水木金土";
   const bars=wk.map(d=>{const n=state.days[d]||0;return `<i title="${DOW[new Date(d*86400000).getUTCDay()]} ${n}枚" class="${d===t?"today":""}${n?"":" zero"}" style="height:${n?Math.max(4,Math.round(n/mx*18)):3}px"></i>`}).join("");
-  $("#stats").innerHTML=`<span class="stat">今日 <b>${state.days[t]||0}</b> 枚</span><span class="stat wk">連続 <b>${streak()}</b> 日<span class="bars" aria-label="直近7日の枚数">${bars}</span></span><span class="stat">定着 <b>${mastered}</b><span class="tot"> / ${allWords().length}</span> 語</span><span class="more">${recOpen?"記録を閉じる ▴":"記録 ▾"}</span>`;
+  const tn=state.days[t]||0,gl=goalN();
+  $("#stats").innerHTML=`<span class="stat${gl&&tn>=gl?" goalok":""}">今日 <b>${tn}</b>${gl?`<span class="tot"> / ${gl}</span>`:""} 枚${gl&&tn>=gl?" ✓":""}</span><span class="stat wk">連続 <b>${streak()}</b> 日<span class="bars" aria-label="直近7日の枚数">${bars}</span></span><span class="stat">定着 <b>${mastered}</b><span class="tot"> / ${allWords().length}</span> 語</span><span class="more">${recOpen?"記録を閉じる ▴":"記録 ▾"}</span>`;
   renderRecord();
 }
 
@@ -4131,7 +4150,7 @@ function sessHtml(){
       <div class="tile"><b>${sess.n}<small>枚</small></b><span>答えた数</span></div>
       <div class="tile"><b>${pct}<small>%</small></b><span>1回で浮かんだ</span></div>
       <div class="tile"><b>${min}<small>分</small></b><span>かかった時間</span></div></div>
-    <div class="note">${msg}${sess.fresh.length?`新しく始めた単語は ${sess.fresh.length}語です。`:""}</div>
+    <div class="note">${msg}${sess.fresh.length?`新しく始めた単語は ${sess.fresh.length}語です。`:""}${(()=>{const g=goalN(),n=state.days[dayNum()]||0;return !g?"":n>=g?`今日の目標（${g}枚）は達成しています。`:`今日の目標まで、あと ${g-n}枚です。`})()}</div>
     ${miss.length?`<div class="label">浮かばなかった単語（${miss.length}）</div><div class="dfchips">${miss.map(q=>{const w=byId(wid(q));return w?`<span class="twc">${esc(w.w)}<small>${esc(w.ja)}</small></span>`:""}).join("")}</div>
       <button class="linkbtn" id="missAgain" style="align-self:flex-start">この${miss.length}語だけもう一度</button>`:""}`;
 }
@@ -4225,7 +4244,7 @@ function renderHello(area){
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」「設定」</b>ボタンからいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
     <div class="note" style="font-size:12px">${ON_CLAUDE?"AIの機能（ニュアンス・使い分け・AI英会話）は、claude.ai にログインして開くと使えます。ログインしていなくても、カード・クイズ・リスニングは使えます。"
-      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツは全部使えます。進み具合はこの端末に保存されます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
+      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（ブラウザのデータを消すと消えます）。スマホなら、設定の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
   </div>`;
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
@@ -4255,16 +4274,16 @@ function renderCards(){
     $("#qtResume").onclick=()=>{qtBye=false;sess=newSess();renderCards()};return}
   // 3分だけ：時間が来たあとの結果
   if(qtDone){
-    area.innerHTML=`<div class="panel fade"><div style="font-size:18px;font-weight:700">3分おつかれさまでした！</div>${unlockHtml()}${sessHtml()}
+    area.innerHTML=`<div class="panel fade"><div style="font-size:18px;font-weight:700">3分おつかれさまでした！</div>${goalHtml()}${unlockHtml()}${sessHtml()}
       <div class="row" style="justify-content:center"><button class="btn primary" id="qtAgain">もう3分</button><button class="btn" id="qtCont">このまま続ける</button></div>${talkBtnHtml()}
       <button class="linkbtn" id="qtEnd" style="align-self:center">今日はここまで</button></div>`;
-    bindSess();bindUnlock();bindTalkBtn();$("#qtAgain").onclick=startQt;
+    bindSess();bindUnlock();bindGoal();bindTalkBtn();$("#qtAgain").onclick=startQt;
     $("#qtCont").onclick=()=>{qtDone=false;sess=newSess();renderCards();window.scrollTo(0,0)};
     $("#qtEnd").onclick=()=>{qtDone=false;qtBye=true;renderCards();window.scrollTo(0,0)};return}
   if(ratioBreak&&!cram){
-    area.innerHTML=`<div class="panel fade">${unlockHtml()}${sessHtml()}<div class="row" style="justify-content:center"><button class="btn primary" id="ratioGo">続ける</button><button class="btn" id="goQuiz">クイズで確認</button></div>${talkBtnHtml()}
+    area.innerHTML=`<div class="panel fade">${goalHtml()}${unlockHtml()}${sessHtml()}<div class="row" style="justify-content:center"><button class="btn primary" id="ratioGo">続ける</button><button class="btn" id="goQuiz">クイズで確認</button></div>${talkBtnHtml()}
       ${todayDone().length?`<button class="linkbtn" id="cramGo" style="align-self:center">今日やった単語をもう一度（${todayDone().length}語）</button>`:""}</div>`;
-    bindSess();bindUnlock();bindTalkBtn();const cg=$("#cramGo");if(cg)cg.onclick=()=>startCram();$("#ratioGo").onclick=()=>{ratioBreak=false;sess=newSess();renderCards();window.scrollTo(0,0)};$("#goQuiz").onclick=()=>showTab("quiz");return}
+    bindSess();bindUnlock();bindGoal();bindTalkBtn();const cg=$("#cramGo");if(cg)cg.onclick=()=>startCram();$("#ratioGo").onclick=()=>{ratioBreak=false;sess=newSess();renderCards();window.scrollTo(0,0)};$("#goQuiz").onclick=()=>showTab("quiz");return}
   if(!w&&!cram){area.innerHTML=`<div class="panel done fade"><b>出せる単語がありません</b><div class="note">レベルとテーマの範囲を広げてください。</div></div>`;return}
   if(!w){   // もう一度モードが終わった
     const again=todayDone().length;
@@ -4294,7 +4313,7 @@ function renderCards(){
   const norm=x=>String(x).trim().toLowerCase().replace(/[.,!?'’]/g,"").replace(/\s+/g," ");
   const typed=rev&&!flipped?`<input type="text" id="revIn" value="${esc(revTyped)}" placeholder="英語を書いてみる（任意・Enterでめくる）" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="英語を書く">`
     :rev&&revTyped.trim()?`<div class="verdict ${norm(revTyped)===norm(w.w)?"ok":"ng"}">${norm(revTyped)===norm(w.w)?"✓ 書いた答えは合っています":"書いた答え："+esc(revTyped)}</div>`:"";
-  area.innerHTML=`${unlockHtml()}<div>${qt?qtBarHtml():""}${cram?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">もう一度モード（覚え具合は変わりません）</span><button class="linkbtn" id="cramStop">やめる</button></div>`:""}${!cram&&!qt?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">苦手ほど多く出ます ・ 新しい単語 ${NEW_MIX[newMix()].name}</span><button class="linkbtn" id="ratioAdd">新しい単語を${npd()}語足す</button></div>${ratioMsg?`<div class="note" style="color:var(--good);margin-bottom:6px">${esc(ratioMsg)}</div>`:""}`:""}<div class="progress"><span>${cram?`もう一度 <b>${queue.length}</b>`:`出題中 <b>${ratioWords().length+ratioFresh.length}</b>語 ・ 平均の覚え具合 <b>${ratioAvg()}</b>%`}</span><span>${rev?"日→英 ・ ":""}${c?"覚え具合 "+Math.round(mNow(c)*100)+"%":"はじめて"}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
+  area.innerHTML=`${goalHtml()}${unlockHtml()}<div>${qt?qtBarHtml():""}${cram?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">もう一度モード（覚え具合は変わりません）</span><button class="linkbtn" id="cramStop">やめる</button></div>`:""}${!cram&&!qt?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">苦手ほど多く出ます ・ 新しい単語 ${NEW_MIX[newMix()].name}</span><button class="linkbtn" id="ratioAdd">新しい単語を${npd()}語足す</button></div>${ratioMsg?`<div class="note" style="color:var(--good);margin-bottom:6px">${esc(ratioMsg)}</div>`:""}`:""}<div class="progress"><span>${cram?`もう一度 <b>${queue.length}</b>`:`出題中 <b>${ratioWords().length+ratioFresh.length}</b>語 ・ 平均の覚え具合 <b>${ratioAvg()}</b>%`}</span><span>${rev?"日→英 ・ ":""}${c?"覚え具合 "+Math.round(mNow(c)*100)+"%":"はじめて"}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
     <div class="icard fade" id="icard" role="button" tabindex="0" aria-label="カードをめくる"><span class="hole"></span><span class="cmeta">${dotsHtml(box)}</span>${inner}</div>
     ${typed}${flipped?nuanceHtml(w):""}
     <div class="grades" ${flipped?"":"hidden"}>
@@ -4313,6 +4332,7 @@ function renderCards(){
   const cs=$("#cramStop");if(cs)cs.onclick=()=>{buildQueue();renderCards()};
   const qs=$("#qtStop");if(qs)qs.onclick=()=>{stopQt();sess=newSess();renderCards()};
   const qp=$("#qtPauseBtn");if(qp)qp.onclick=pauseQt;
+  bindGoal();
   bindUnlock();
   const ra=$("#ratioAdd");if(ra)ra.onclick=()=>{const add=pickFresh(npd(),ratioFresh).map(w=>w.id);ratioFresh=ratioFresh.concat(add);
     ratioMsg=add.length?`新しい単語を${add.length}語足しました。`:"選んだ範囲の単語は、すべて出題中です。";if(!flipped)ratioNext();renderCards()};
@@ -4371,7 +4391,8 @@ function grade(g){
   const q=queue.shift(),id=wid(q),store=storeOf(q),t=dayNum();let c=store[id];
   if(!(q in sess.first))sess.first[q]=g;if(g==="again")sess.agains[q]=(sess.agains[q]||0)+1;sess.n++;
   if(!isRev(q)&&!c&&!sess.fresh.includes(q))sess.fresh.push(q);
-  const reset=()=>{state.days[t]=(state.days[t]||0)+1;flipped=false;cardEx=null;exErr="";revTyped="";nuOpen=null;save();renderCards();renderList()};
+  goalNote=false;
+  const reset=()=>{state.days[t]=(state.days[t]||0)+1;if(goalN()&&state.days[t]===goalN())goalNote=true;flipped=false;cardEx=null;exErr="";revTyped="";nuOpen=null;save();renderCards();renderList()};
   // もう一度モード：覚え具合（次に出る日）は変えない。浮かばなかったら少しあとにもう一度
   if(cram){if(g==="again")queue.splice(Math.min(3,queue.length),0,q);else sessionDone++;reset();return}
   store[id]=applyAnswer(c||{seen:0},g==="good",t);
@@ -4390,10 +4411,11 @@ function renderList(){
   const mastered=allWords().filter(w=>boxOf(w)>=MASTER).sort((a,b)=>boxOf(b)-boxOf(a));
   const th=$("#listTheme").value||"";
   if(!$("#listTheme").options.length)$("#listTheme").innerHTML='<option value="">すべてのテーマ</option>'+THEME_KEYS.map(k=>`<option value="${k}">${THEMES[k]}</option>`).join("");
-  const ws=(listMode==="weak"?weak:listMode==="mastered"?mastered:allWords()).filter(w=>!th||w.cat===th);
-  $("#listMode").innerHTML=[["all","すべて"],["weak",`苦手（${weak.length}）`],["mastered",`定着（${mastered.length}）`]].map(([k,l])=>`<button data-m="${k}" aria-pressed="${listMode===k}">${l}</button>`).join("");
+  const ut=state.usedTalk||{},used=allWords().filter(w=>ut[w.id]).sort((a,b)=>ut[b.id]-ut[a.id]);   // 会話で使えた単語（よく使えた順）
+  const ws=(listMode==="weak"?weak:listMode==="mastered"?mastered:listMode==="used"?used:allWords()).filter(w=>!th||w.cat===th);
+  $("#listMode").innerHTML=[["all","すべて"],["weak",`苦手（${weak.length}）`],["mastered",`定着（${mastered.length}）`]].concat(ON_CLAUDE||used.length?[["used",`会話で使えた（${used.length}）`]]:[]).map(([k,l])=>`<button data-m="${k}" aria-pressed="${listMode===k}">${l}</button>`).join("");
   $("#listMode").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{listMode=b.dataset.m;renderList()});
-  $("#wlist").innerHTML=ws.filter(w=>!q||w.w.toLowerCase().includes(q)||w.ja.includes(q)).map(w=>`<div class="wrow"><div class="w">${esc(w.w)}${state.showIpa!==false&&ipaOf(w)?`<span class="ipa-s">/${esc(ipaOf(w))}/</span>`:""}<span class="chip">${w.lv?LEVELS[w.lv].short:"追加"}</span>${lapsesOf(w)>=2?'<span class="chip weak">苦手</span>':""}</div>${dotsHtml(boxOf(w))}<div class="j">${esc(w.ja)}</div></div>`).join("")||'<div class="note" style="padding:10px 0">見つかりません</div>';
+  $("#wlist").innerHTML=ws.filter(w=>!q||w.w.toLowerCase().includes(q)||w.ja.includes(q)).map(w=>`<div class="wrow"><div class="w">${esc(w.w)}${state.showIpa!==false&&ipaOf(w)?`<span class="ipa-s">/${esc(ipaOf(w))}/</span>`:""}<span class="chip">${w.lv?LEVELS[w.lv].short:"追加"}</span>${lapsesOf(w)>=2?'<span class="chip weak">苦手</span>':""}${ut[w.id]?`<span class="chip used">💬 使えた${ut[w.id]>1?"×"+ut[w.id]:""}</span>`:""}</div>${dotsHtml(boxOf(w))}<div class="j">${esc(w.ja)}</div></div>`).join("")||'<div class="note" style="padding:10px 0">見つかりません</div>';
 }
 function renderLevels(){
   const ws=allWords();
@@ -4470,18 +4492,21 @@ function renderQuickbar(){const el=$("#quickbar");if(!el)return;
 }
 let setDraft=null;
 function applyCardSettings(){
-  const npdChanged=setDraft.npd!==npd();state.newMix=setDraft.mix;state.newPerDay=setDraft.npd;save();
+  const npdChanged=setDraft.npd!==npd();state.newMix=setDraft.mix;state.newPerDay=setDraft.npd;state.goal=setDraft.goal;save();
   if(npdChanged)buildQueue();else if(!flipped&&!cram)ratioNext();   // 1回の数が変わったら、新しい回から始める
   renderCards();renderSettings();
-  $("#setDone").textContent=`✓ 更新しました（新しい単語 ${NEW_MIX[newMix()].name} ・ 1回${npd()}枚）。次のカードから変わります。`;
+  $("#setDone").textContent=`✓ 更新しました（新しい単語 ${NEW_MIX[newMix()].name} ・ 1回${npd()}枚 ・ 目標 ${goalN()?goalN()+"枚":"なし"}）。次のカードから変わります。`;
 }
 function renderSettings(){
   renderQuickbar();
   const mx=NEW_MIX[newMix()],rate={0.85:"ゆっくり",1:"ふつう",1.15:"はやめ"}[state.speechRate||1]||"ふつう";
-  $("#setSum").textContent=`新しい単語 ${mx.name} ・ 1回${npd()}枚 ・ 読み上げ ${rate}${state.autoSpeak?"・自動":""}`;
+  $("#setSum").textContent=`新しい単語 ${mx.name} ・ 1回${npd()}枚 ・ 目標 ${goalN()?goalN()+"枚":"なし"} ・ 読み上げ ${rate}${state.autoSpeak?"・自動":""}`;
   // カードの出し方は、押しただけでは変えない。「この設定で更新する」で反映する（パネルを閉じたら選びかけは捨てる）
-  if(!setDraft||!$("#setBox").open)setDraft={mix:newMix(),npd:npd()};
-  const dm=NEW_MIX[setDraft.mix],changed=setDraft.mix!==newMix()||setDraft.npd!==npd();
+  if(!setDraft||!$("#setBox").open)setDraft={mix:newMix(),npd:npd(),goal:goalN()};
+  const dm=NEW_MIX[setDraft.mix],changed=setDraft.mix!==newMix()||setDraft.npd!==npd()||setDraft.goal!==goalN();
+  $("#goalSeg").innerHTML=GOAL_CHOICES.map(n=>`<button data-gl="${n}" aria-pressed="${setDraft.goal===n}">${n?n+"枚":"なし"}</button>`).join("");
+  $("#goalSeg").querySelectorAll("[data-gl]").forEach(b=>b.onclick=()=>{setDraft.goal=+b.dataset.gl;$("#setDone").textContent="";renderSettings()});
+  $("#goalNote").textContent=setDraft.goal?`1日に${setDraft.goal}枚答えたら「今日の目標 達成」が出ます。上の「今日」の数にも目標が出ます。達成したあとも続けられます。`:"目標を出しません。";
   $("#mixSeg").innerHTML=Object.entries(NEW_MIX).map(([k,m])=>`<button data-x="${k}" aria-pressed="${setDraft.mix===k}">${m.name}</button>`).join("");
   $("#mixSeg").querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{setDraft.mix=b.dataset.x;$("#setDone").textContent="";renderSettings()});
   $("#mixNote").textContent=`カードの${dm.note}が、はじめての単語になります。残りは苦手な単語と、忘れかけた単語です。同じ単語ばかり出るときは「多め」に。`;
@@ -4842,7 +4867,10 @@ $("#talkStart").onclick=()=>{
 $("#talkReset").onclick=()=>{if(talk.ctl)talk.ctl.abort();talk={...talk,turns:[],msgs:[],busy:false,started:false,err:""};$("#talkSetup").hidden=false;$("#composer").hidden=true;renderChat();renderTalkPreset();window.scrollTo(0,0)};
 $("#talkStop").onclick=()=>{if(talk.ctl)talk.ctl.abort()};
 function send(){const v=$("#talkInput").value.trim();if(!v||talk.busy)return;
-  talkWords().forEach(w=>{if(!talk.used.includes(w.id)&&wordRe(w).test(v))talk.used.push(w.id)});
+  // 今回の単語を使えたら ✓。会話で使えた単語は回数を記録して、単語一覧の「会話で使えた」で見られる
+  let usedNew=false;
+  talkWords().forEach(w=>{if(!talk.used.includes(w.id)&&wordRe(w).test(v)){talk.used.push(w.id);state.usedTalk=Object.assign({},state.usedTalk,{[w.id]:((state.usedTalk||{})[w.id]||0)+1});usedNew=true}});
+  if(usedNew){save();renderList()}
   talk.msgs.push({role:"me",text:v});talk.turns.push({role:"user",content:v});$("#talkInput").value="";$("#hints").innerHTML="";micMsg("");if(recOn)try{rec.stop()}catch(e){}askAI()}
 $("#talkSend").onclick=send;
 // マイクで話す：ブラウザの音声認識（Chrome・Edge・Safari）で英語を聞き取り、入力欄に入れる。送信は自分で押す（聞き取りを直せるように）。
@@ -4889,10 +4917,66 @@ const DF_BUILTIN={"借りる":{summary:"英語では「持ち出すか」「お�
  {en:"rent",pos:"verb",form:"rent + 物",why:"rent は元々「賃料」。お金が絡む貸し借りにだけ使う。",when:"お金を払って借りるとき（部屋・車・道具など）。",image:"料金を払って使う権利をもらう",ex:"We rented a car in Hawaii.",exJa:"ハワイでレンタカーを借りた。",ng:""},
  {en:"use",pos:"verb",form:"use + 物",why:"「使う」だけで、移動も所有も含まない。だから持ち出さない物に合う。",when:"持ち出さずに、その場で使わせてもらうとき（トイレ・電話など）。",image:"その場でちょっと使う",ex:"Can I use your bathroom?",exJa:"トイレを借りてもいいですか？",ng:"トイレに borrow を使うと、持ち帰るように聞こえる。"},
  {en:"lend",pos:"verb",form:"lend + 人 + 物",why:"「人に物を渡す」形（give と同じ）なので、貸す側の動詞になる。",when:"「貸す」側から言うとき。Can you lend me ~? で「貸してくれる？」。",image:"自分の物を相手へ渡す",ex:"Can you lend me some money?",exJa:"お金を貸してくれない？",ng:"borrow と向きが逆なので混ぜやすい。"}],
- tip:"持ち出す→borrow、お金を払う→rent、その場で使う→use、貸す側→lend。"}};
+ tip:"持ち出す→borrow、お金を払う→rent、その場で使う→use、貸す側→lend。"},
+// ここから下も、よく使う言葉の使い分け（AIなしで読める。claude.ai の外でも使える）
+"予約":{summary:"英語では「席や部屋を取っておく」のか「人に会う時間を決める」のかで言い分けます。",items:[
+ {en:"reservation",pos:"noun",form:"make a reservation (for ~)",why:"reserve（取っておく）の名詞。場所や席を確保しておくこと。",when:"レストラン・ホテル・飛行機など、席や部屋を取っておくとき。",image:"場所・席を取っておく",ex:"I'd like to make a reservation for two at seven.",exJa:"7時に2名で予約したいのですが。",ng:"医者や美容院など「人に会う」予約には appointment を使う。"},
+ {en:"appointment",pos:"noun",form:"make an appointment (with 人)",why:"appoint は「時間や場所を指定する」。相手と会う時間を決めておくこと。",when:"病院・歯医者・美容院・面談など、人に会う時間を決めるとき。",image:"人と会う時間の約束",ex:"I have a dentist appointment at three.",exJa:"3時に歯医者の予約がある。",ng:"レストランの席の予約には使わない。"},
+ {en:"book",pos:"verb",form:"book + 席・部屋・チケット",why:"帳簿（book）に名前を書き込む、から「予約する」。",when:"「予約する」と動詞で言いたいとき。会話でいちばん気軽に使える。",image:"名前を書き込んで押さえる",ex:"I booked a flight to Osaka.",exJa:"大阪行きの便を予約した。",ng:"book a doctor は×。医者は book an appointment。"},
+ {en:"reserve",pos:"verb",form:"reserve + 席・部屋",why:"「とっておく」が元の意味。book より少し改まった言い方。",when:"お店の人が言う「予約済み」や、ていねいに言いたいとき。",image:"使う人のために取っておく",ex:"Sorry, this table is reserved.",exJa:"すみません、この席は予約済みです。",ng:""}],
+ tip:"席・部屋・チケット→reservation／book、医者・美容院・面談→appointment。"},
+"見る":{summary:"英語では「自然に目に入る」のか「自分から目を向ける」のか「しばらく見続ける」のかで言い分けます。",items:[
+ {en:"see",pos:"verb",form:"see + 物・人",why:"見ようとしなくても目に入る。だから「会う」「わかる」の意味にも広がる。",when:"自然に見える・目に入るとき。映画館で映画を見るときも see a movie。",image:"目に入ってくる",ex:"Did you see that?",exJa:"今の見た？",ng:""},
+ {en:"look",pos:"verb",form:"look at + 物・人",why:"自分から目を向ける動き。向ける先を at で示す。",when:"「ほら見て」と、どこかに目を向けるとき。",image:"自分から目を向ける",ex:"Look at this picture.",exJa:"この写真を見て。",ng:"look this は×。look at this。"},
+ {en:"watch",pos:"verb",form:"watch + テレビ・試合・人",why:"動くもの・変わっていくものを、しばらく目で追う。",when:"テレビ・スポーツ・動画など、動きを見続けるとき。",image:"動きを見守る",ex:"I watched the game on TV.",exJa:"テレビで試合を見た。",ng:"テレビは watch TV（the を付けない）。"},
+ {en:"check",pos:"verb",form:"check + 物",why:"「見る」の中でも、合っているか確かめるために見ること。",when:"「ちょっと見てもらえる？」と確認してほしいとき。",image:"確かめるために見る",ex:"Can you check my English?",exJa:"私の英語を見てもらえますか？",ng:""}],
+ tip:"目に入る→see、目を向ける→look at、見続ける→watch、確かめる→check。"},
+"約束":{summary:"英語では「何かをすると誓う」のか「人と会う予定」なのかで言い分けます。日本語の「約束がある」は promise ではありません。",items:[
+ {en:"promise",pos:"verb",form:"promise (to 動詞)／make a promise",why:"「必ずそうする」と相手に誓うこと。",when:"「〜するって約束する」と言うとき。",image:"必ずやると誓う",ex:"I promise I'll call you tomorrow.",exJa:"明日電話するって約束する。",ng:"「今夜は約束がある」に promise は使わない。"},
+ {en:"plans",pos:"noun",form:"have plans (with 人)",why:"英語では「人と会う約束」を「予定」として言う。",when:"友達と会う約束・予定があるとき。",image:"人と会う予定",ex:"Sorry, I have plans tonight.",exJa:"ごめん、今夜は約束があるんだ。",ng:"I have a promise は不自然。"},
+ {en:"appointment",pos:"noun",form:"have an appointment (with 人)",why:"時間を決めて人と会う、仕事や用事の約束。",when:"医者・取引先など、用事で人と会う約束。",image:"時間を決めた用事の約束",ex:"I have an appointment with a client at two.",exJa:"2時に取引先と約束がある。",ng:"友達と遊ぶ約束には使わない（plans）。"},
+ {en:"deal",pos:"noun",form:"It's a deal.／Deal?",why:"取り決め・取引のこと。「それで決まりね」の軽い言い方。",when:"「じゃあ約束ね」「それで決まり」と取り決めるとき。",image:"お互いの取り決め",ex:"You cook, and I'll do the dishes. Deal?",exJa:"君が作って、僕が皿を洗う。それでいい？",ng:""}],
+ tip:"誓う→promise、友達と会う→plans、医者・仕事→appointment、取り決め→deal。"},
+"言う":{summary:"英語では「言葉そのもの」「人に伝える内容」「声に出すこと」「やりとり」のどこに目を向けるかで言い分けます。",items:[
+ {en:"say",pos:"verb",form:"say + 言葉 (to 人)",why:"口から出た言葉そのものに目を向ける。",when:"何と言ったか、言葉を伝えるとき。",image:"言葉を口にする",ex:"What did you say?",exJa:"何て言ったの？",ng:"say me は×。say to me か tell me。"},
+ {en:"tell",pos:"verb",form:"tell + 人 + 内容",why:"相手に内容を届ける。だから「人」がすぐ後ろに来る。",when:"人に情報や話を伝えるとき。「教える」にもなる。",image:"相手に内容を届ける",ex:"Can you tell me the way to the station?",exJa:"駅への道を教えてもらえますか？",ng:"tell の後ろには、ふつう「人」を入れる。"},
+ {en:"speak",pos:"verb",form:"speak + 言語／speak to 人",why:"声を出して話すこと、言語を使うことに目を向ける。",when:"言語を話すとき、改まって話すとき。",image:"声に出して話す",ex:"Do you speak Japanese?",exJa:"日本語を話しますか？",ng:""},
+ {en:"talk",pos:"verb",form:"talk to/with 人 (about ~)",why:"相手とのやりとり、会話そのもの。",when:"誰かと話す・相談するとき。",image:"言葉をやりとりする",ex:"Can we talk about it later?",exJa:"それはあとで話せる？",ng:"talk English は×。speak English。"}],
+ tip:"言葉→say、人に伝える→tell、言語・声→speak、会話→talk。"},
+"直す":{summary:"英語では「壊れた物」「間違い」「別の言葉」のどれを直すかで言い分けます。",items:[
+ {en:"fix",pos:"verb",form:"fix + 物・問題",why:"「固定する・ちゃんとさせる」から、うまく動くようにすること。",when:"壊れた物や問題を直すとき。会話でいちばん広く使える。",image:"ちゃんと動くようにする",ex:"Can you fix my bike?",exJa:"自転車を直せる？",ng:""},
+ {en:"repair",pos:"verb",form:"repair + 機械・建物",why:"専門の人が手を入れて元に戻す。fix より少し改まった言い方。",when:"お店や業者に修理してもらうとき。",image:"手を入れて元に戻す",ex:"I had my watch repaired.",exJa:"時計を修理してもらった。",ng:"文章の間違いには使わない。"},
+ {en:"correct",pos:"verb",form:"correct + 間違い・文",why:"「正しい」という意味の形容詞から。正しい形にすること。",when:"間違い・文章・発音を正しく直すとき。",image:"正しい形にする",ex:"Please correct my mistakes.",exJa:"間違いを直してください。",ng:"壊れた物には使わない。"},
+ {en:"translate",pos:"verb",form:"translate + 文 + into 言語",why:"日本語では「英語に直す」と言うが、英語では「訳す」と言う。",when:"「英語に直す」「日本語に直す」と言いたいとき。",image:"別の言葉に移す",ex:"Can you translate this into English?",exJa:"これを英語に直してもらえる？",ng:"fix this into English は×。"}],
+ tip:"壊れた物→fix／repair、間違い→correct、ほかの言葉に→translate。"},
+"遅い":{summary:"英語では「時間（時刻）」の遅さか「速さ」の遅さかで、まず分けます。",items:[
+ {en:"late",pos:"adj",form:"be late (for ~)",why:"決まった時刻より後ろにずれていること。",when:"遅刻するとき、時刻が遅いとき。",image:"時刻より後ろ",ex:"Sorry I'm late.",exJa:"遅れてごめん。",ng:"速さには使わない。"},
+ {en:"slow",pos:"adj",form:"be slow",why:"動き・速さがゆっくりなこと。",when:"ネット・電車・人の動きなどの速さが遅いとき。",image:"速さがゆっくり",ex:"The internet is slow today.",exJa:"今日はネットが遅い。",ng:"遅刻に I'm slow は×。I'm late。"},
+ {en:"behind",pos:"adv",form:"be behind (schedule)",why:"予定より「後ろ」にいる、から。",when:"仕事や準備が予定より遅れているとき。",image:"予定より後ろにいる",ex:"We're a little behind schedule.",exJa:"予定より少し遅れています。",ng:""},
+ {en:"delayed",pos:"adj",form:"be delayed",why:"自分のせいではなく、外の理由で遅らされる。だから受け身の形。",when:"電車・飛行機・荷物などが遅れるとき。",image:"外の理由で遅れる",ex:"My flight was delayed two hours.",exJa:"飛行機が2時間遅れた。",ng:""}],
+ tip:"時刻・遅刻→late、速さ→slow、予定より→behind、電車や飛行機→delayed。"},
+"合う":{summary:"英語では「サイズ」「人に似合う」「組み合わせ」「おそろい」のどれが合うかで言い分けます。",items:[
+ {en:"fit",pos:"verb",form:"物 + fit + 人",why:"形や大きさがぴったり収まること。",when:"服や靴のサイズが合うとき。",image:"形・大きさがぴったり",ex:"These shoes don't fit me.",exJa:"この靴はサイズが合わない。",ng:"色や雰囲気が「似合う」には suit。"},
+ {en:"suit",pos:"verb",form:"物 + suit + 人",why:"その人に「ふさわしい」こと。",when:"色・服・髪型などが、その人に似合うとき。",image:"その人にふさわしい",ex:"That color really suits you.",exJa:"その色、すごく似合うね。",ng:""},
+ {en:"go with",pos:"phrase",form:"A + go with + B",why:"A と B がいっしょに行ける、から「組み合わせが合う」。",when:"服どうし、料理と飲み物などの組み合わせが合うとき。",image:"いっしょにいて合う",ex:"Does this tie go with my shirt?",exJa:"このネクタイ、シャツに合う？",ng:""},
+ {en:"match",pos:"verb",form:"A + match + B",why:"同じ・そろっていること。",when:"色や柄がそろっている、おそろいのとき。",image:"そろっている",ex:"Your bag matches your shoes.",exJa:"バッグが靴とおそろいだね。",ng:"「似合う」の意味で人に使うのは suit。"}],
+ tip:"サイズ→fit、人に似合う→suit、組み合わせ→go with、おそろい→match。"},
+"大丈夫":{summary:"日本語の「大丈夫」は、元気・断り・気にしないで・都合がいい、と場面で意味が変わります。英語では場面ごとに言い方を変えます。",items:[
+ {en:"I'm fine",pos:"phrase",form:"I'm fine.／I'm OK.",why:"自分の体や気分の状態が問題ないこと。",when:"「大丈夫？」と心配されたとき。",image:"自分の状態は問題ない",ex:"\"Are you OK?\" \"Yeah, I'm fine.\"",exJa:"「大丈夫？」「うん、大丈夫。」",ng:""},
+ {en:"I'm good",pos:"phrase",form:"I'm good, thanks.／No, thanks.",why:"「もう足りている」から、やわらかく断る言い方。",when:"「袋いりますか？」などを断るとき。",image:"足りているので、いらない",ex:"\"Do you need a bag?\" \"I'm good, thanks.\"",exJa:"「袋いりますか？」「大丈夫です、ありがとう。」",ng:"I'm OK だけだと「いる・いらない」があいまいになることがある。"},
+ {en:"Don't worry about it",pos:"phrase",form:"Don't worry about it.／No problem.",why:"「気にしないで」と相手を安心させる。",when:"謝られたときの「大丈夫ですよ」。",image:"気にしなくていい",ex:"\"Sorry I'm late.\" \"Don't worry about it.\"",exJa:"「遅れてごめん」「大丈夫だよ。」",ng:""},
+ {en:"That works for me",pos:"phrase",form:"That works (for me).",why:"その予定や案が「うまくいく」から、都合がいいこと。",when:"予定や提案に「それで大丈夫です」と答えるとき。",image:"その予定で問題ない",ex:"\"How about Friday at six?\" \"That works for me.\"",exJa:"「金曜の6時はどう？」「それで大丈夫。」",ng:""}],
+ tip:"元気→I'm fine、断る→I'm good, thanks、謝られた→Don't worry about it、予定→That works for me。"},
+"かける":{summary:"日本語の「かける」はいろいろな動作に使いますが、英語では何をかけるかで動詞が変わります。",items:[
+ {en:"call",pos:"verb",form:"call + 人",why:"相手を「呼ぶ」から、電話をかけること。",when:"電話をかけるとき。",image:"相手を呼び出す",ex:"I'll call you later.",exJa:"あとで電話するね。",ng:"call to you は×。call you。"},
+ {en:"put on",pos:"phrase",form:"put on + 眼鏡・服",why:"体に「のせる」動作。",when:"眼鏡をかける・服を着る、その動作をするとき。",image:"身につける動作",ex:"Put on your glasses.",exJa:"眼鏡をかけて。",ng:"「かけている（状態）」には wear。"},
+ {en:"wear",pos:"verb",form:"wear + 眼鏡・服",why:"身につけている「状態」。",when:"眼鏡をかけている、服を着ているとき。",image:"身につけている",ex:"She wears glasses.",exJa:"彼女は眼鏡をかけている。",ng:""},
+ {en:"spend",pos:"verb",form:"spend + 時間・お金 (on ~)",why:"時間やお金を「使ってなくす」こと。",when:"時間・お金をかけるとき。",image:"時間・お金を使う",ex:"Don't spend too much time on it.",exJa:"それにあまり時間をかけないで。",ng:""},
+ {en:"hang",pos:"verb",form:"hang + 物 (on ~)",why:"上からつるすこと。",when:"コートや絵を壁にかけるとき。",image:"つるす",ex:"Hang your coat here.",exJa:"ここにコートをかけて。",ng:""}],
+ tip:"電話→call、眼鏡（かける動作）→put on、眼鏡（かけている）→wear、時間・お金→spend、壁に→hang。"}};
 let dfCache={};try{dfCache=JSON.parse(localStorage.getItem(LS+"-df2")||"{}")||{}}catch(e){}
 let dfCur="借りる",dfBusy=false;
-const dfGet=q=>dfCache[q]||DF_BUILTIN[q];
+const dfGet=q=>DF_BUILTIN[q]||dfCache[q];   // 用意してある使い分けを先に（前にAIで作って保存したものより、点検済みのほうを出す）
 function renderDiff(){
   const recent=Object.keys(dfCache).filter(k=>!DF_PRESET.includes(k)).slice(-8).reverse();
   $("#dfChips").innerHTML=DF_PRESET.concat(recent).map(k=>`<button data-df="${esc(k)}" aria-pressed="${k===dfCur}">${esc(k)}</button>`).join("");
@@ -5414,6 +5498,11 @@ function qtTick(){
 function qtBarHtml(){const left=qtLeft();
   return `<div class="qtbar${left?"":" over"}" id="qtBar"><span>⏱ 3分だけ ・ のこり <b id="qtLeft">${fmtMs(left)}</b> <span class="note" id="qtMsg">${left?"":"時間です！ このカードに答えたら終わり"}</span></span><span class="row" style="gap:12px;flex-wrap:nowrap"><button class="linkbtn" id="qtPauseBtn" type="button">⏸ 一時停止</button><button class="linkbtn" id="qtStop" type="button">やめる</button></span></div>`}
 
+/* ---------- 1日の目標を達成したお知らせ（達成したカードの次に一度だけ。次に答えたら消える） ---------- */
+let goalNote=false;
+const goalHtml=()=>goalNote?`<div class="unlock fade"><b>🎉 今日の目標 ${goalN()}枚 達成！</b><span class="note" style="margin:0">連続 ${streak()}日目です。このまま続けても、今日はここまでにしてもOKです。</span><button class="linkbtn" id="goalClose" type="button" style="align-self:flex-start">閉じる</button></div>`:"";
+function bindGoal(){const b=$("#goalClose");if(b)b.onclick=()=>{goalNote=false;renderCards()}}
+
 /* ---------- クイズ・リスニングができるようになったお知らせ ----------
    カードで4語以上見たら一度だけ出す。前から使っている人（もう4語以上ある人）には出さない */
 let unlockNote=false;
@@ -5619,6 +5708,32 @@ if(!ON_CLAUDE){$("#talkSetup").hidden=true;$("#talkOff").hidden=false;
   $("#talkOff").innerHTML=`<div class="label">AI英会話</div><div><b>AI英会話は claude.ai 版で使えます</b></div>
     <div class="note">AIが相手役になって、カフェ・空港・職場などの場面で英語の会話を練習できます。あなたの英文を毎回やさしく添削し、言えなかった表現はカードに追加できます。使うには claude.ai のアカウント（無料で作れます）が必要です。</div>
     <div>${AI_LINK}</div><div class="note" style="font-size:12px">claude.ai 版の進み具合は、このページとは別に保存されます。</div>`}
+/* ---------- ホーム画面に追加（GitHub Pages 版だけ） ----------
+   manifest.json・sw.js・アイコンは「公開用」フォルダにあり、index.html といっしょに GitHub に上げる。
+   claude.ai の中では使わない（ファイルがないため） */
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+let installEvt=null;
+if(!ON_CLAUDE&&/^https:|^http:\/\/localhost/.test(location.href)){
+  const add=(tag,attrs)=>{const e=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));document.head.appendChild(e)};
+  add("link",{rel:"manifest",href:"manifest.json"});add("link",{rel:"apple-touch-icon",href:"apple-touch-icon.png"});
+  add("meta",{name:"theme-color",content:"#2340b3"});add("meta",{name:"apple-mobile-web-app-capable",content:"yes"});
+  add("meta",{name:"mobile-web-app-capable",content:"yes"});add("meta",{name:"apple-mobile-web-app-title",content:"単語リング"});
+  if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  // Android の Chrome などでは、ボタンからそのまま追加できる
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;renderPwa()});
+  window.addEventListener("appinstalled",()=>{installEvt=null;renderPwa()});
+}
+function renderPwa(){
+  const g=$("#pwaGroup");if(!g)return;g.hidden=ON_CLAUDE;if(ON_CLAUDE)return;
+  if(isStandalone()){$("#pwaBtn").hidden=true;$("#pwaHow").textContent="ホーム画面から開いています。";return}
+  $("#pwaBtn").hidden=!installEvt;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  $("#pwaHow").innerHTML=(installEvt?"":ios?"<b>iPhone・iPad（Safari）</b>：下の共有ボタン（□に↑）→「ホーム画面に追加」。"
+      :"<b>Android（Chrome）</b>：右上の︙ →「ホーム画面に追加」または「アプリをインストール」。<br><b>iPhone（Safari）</b>：共有ボタン（□に↑）→「ホーム画面に追加」。")
+    +(ios?"<br>※ iPhone では、ホーム画面から開いたときと Safari で開いたときで、進み具合が別々に保存されます。追加したら、ホーム画面のほうで続けてください。":"");
+}
+$("#pwaBtn").onclick=async()=>{if(!installEvt)return;installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;renderPwa()};
+renderPwa();
 checkUnlock(true);buildQueue();renderScen();renderAll();updNewDots();
 samplePromise.then(s=>{if(!s)aiOff=true});
 repCtx().then(r=>{if(r&&r.owner)loadReports()});
