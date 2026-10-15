@@ -49,6 +49,16 @@ button{cursor:pointer}
 .sync{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
 .themebtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px 4px 10px;font-size:12px;min-height:34px;flex:none}
 .themebtn svg{width:16px;height:16px}
+/* 右上の設定・アカウントのボタン（ログイン中は名前の1文字目） */
+.avbtn{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;padding:0;font-weight:700;font-size:16px;position:relative}
+.avbtn svg{width:20px;height:20px}
+.avbtn.on{border:0;color:#fff}
+.avbtn[aria-current="page"]{box-shadow:0 0 0 2px var(--accent)}
+.avbtn .avdot{position:absolute;top:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:var(--margin);border:2px solid var(--paper)}
+@media (max-width:420px){.themebtn{padding:4px 8px}.themebtn .tlabel{display:none}}
+#setHost>details>summary{display:none}
+#setHost>details>.inner{padding-top:16px}
+.sethd{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .stats{display:flex;gap:6px;flex-wrap:wrap}
 .stat{display:flex;align-items:baseline;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;color:var(--muted)}
 .statsbtn{border:0;background:none;padding:0;text-align:left;cursor:pointer;gap:6px!important}
@@ -359,7 +369,7 @@ details.flash{animation:flash 1.2s ease}
 
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span class="ring" aria-hidden="true"></span><h1>単語リング</h1><span class="sync" id="sync">この端末に保存</span><button class="themebtn" id="themeBtn" type="button" aria-label="表示を切り替え"></button></div>
+    <div class="brand"><span class="ring" aria-hidden="true"></span><h1>単語リング</h1><span class="sync" id="sync">この端末に保存</span><button class="themebtn" id="themeBtn" type="button" aria-label="表示を切り替え"></button><button class="avbtn" id="avBtn" type="button" aria-label="設定・アカウント"></button></div>
     <button class="stats statsbtn" id="stats" type="button" aria-expanded="false" aria-controls="rec"></button>
   </header>
   <section class="panel rec" id="rec" hidden aria-label="学習の記録"></section>
@@ -487,6 +497,12 @@ details.flash{animation:flash 1.2s ease}
         <div class="note" style="font-size:12px">この欄は、作った人（あなた）にだけ見えています。</div>
       </div>
     </details>
+  </section>
+
+  <!-- SETTINGS（右上のボタンから開く。中身は設定のパネルを起動時にここへ移す） -->
+  <section id="tab-settings" class="tabpane" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="sethd"><div style="font-size:20px;font-weight:700">設定</div><button class="btn" id="setBack" type="button">← もどる</button></div>
+    <div id="setHost"></div>
   </section>
 
   <!-- QUIZ -->
@@ -4082,10 +4098,12 @@ async function cloudSync(){
   }catch(e){setSync("保存待ち…");acctMsg="アカウントとの同期に失敗しました。少し待って開き直してください。";renderAcct()}
 }
 function renderAcct(){
+  if(typeof renderAvatar==="function")renderAvatar();
   const g=$("#acctGroup");if(!g)return;g.hidden=!CAN_CLOUD;if(!CAN_CLOUD)return;
   const name=sbUser?(sbUser.email||(sbUser.user_metadata||{}).name||"ログイン中"):"";
   $("#acctBody").innerHTML=sbUser
-    ?`<div class="note" style="margin:0">ログイン中：<b>${esc(name)}</b><br>進み具合はアカウントに保存されます。ほかのスマホやパソコンでも、同じアカウントでログインすれば続きからできます。</div>
+    ?`<div class="row" style="flex-wrap:nowrap;gap:12px;align-items:center"><span class="avbtn on" aria-hidden="true" style="width:44px;height:44px;font-size:20px;background:${$("#avBtn").style.background||"var(--accent)"}">${esc(Array.from(userName(sbUser)||"?")[0].toUpperCase())}</span><div style="min-width:0"><b>${esc(userName(sbUser)||"ログイン中")}</b>${sbUser.email&&userName(sbUser)!==sbUser.email?`<div class="note" style="margin:0;overflow-wrap:anywhere">${esc(sbUser.email)}</div>`:""}</div></div>
+      <div class="note" style="margin:0">進み具合はアカウントに保存されます。ほかのスマホやパソコンでも、同じアカウントでログインすれば続きからできます。</div>
       <button class="linkbtn" id="acctOut" type="button" style="align-self:flex-start">ログアウト</button>`
     :`<div class="note" style="margin:0">ログインすると、スマホとパソコンで同じ進み具合を使えます。ブラウザのデータを消しても消えません。今この端末にある進み具合は、そのまま引き継がれます。ログインしなくても使えます。</div>
       <button class="btn gbtn" id="acctIn" type="button" ${sb&&!acctBusy?"":"disabled"}><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Googleでログイン</button>`;
@@ -4302,10 +4320,10 @@ function renderHello(area){
     <div class="note">いつでも好きなだけ続けられます。8枚ごとに区切って結果が出て、覚えてきたら新しい単語が自動で足されます（1回の数は設定で5〜100に変えられます）。カードで覚えた単語が、クイズ・リスニング・AI英会話にも出てきます。</div>
     <div class="label" style="margin-top:4px">レベルを選ぶ（いくつでも。あとで変えられます）</div>
     <div class="scen" id="helloLv">${Object.entries(LEVELS).map(([k,L])=>`<button data-lv="${k}" aria-pressed="${state.levels.includes(+k)}"><b>${L.name}</b><span>${L.eiken}</span></button>`).join("")}</div>
-    <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」「設定」</b>ボタンからいつでも変えられます。</div>
+    <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」</b>ボタンと、右上の<b>設定ボタン（丸いアイコン）</b>からいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
     <div class="note" style="font-size:12px">${ON_CLAUDE?"AIの機能（ニュアンス・使い分け・AI英会話）は、claude.ai にログインして開くと使えます。ログインしていなくても、カード・クイズ・リスニングは使えます。"
-      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（設定から Google でログインすると、ほかの端末でも続きができて、消えなくなります）。スマホなら、設定の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
+      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（右上の丸いボタンから Google でログインすると、ほかの端末でも続きができて、消えなくなります）。スマホなら、同じ画面の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
   </div>`;
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
@@ -4545,7 +4563,6 @@ function renderQuickbar(){const el=$("#quickbar");if(!el)return;
   const lv=state.levels.map(l=>LEVELS[l].name).join("・"),th=state.themes.length===THEME_KEYS.length?"":"テーマ"+state.themes.length+"つ";   // スマホで2行に収まるよう短く
   el.innerHTML=`<button class="qb qt" type="button" id="qtBtn" ${qt?'aria-pressed="true"':""}>⏱ ${qt?"3分 実行中":"3分だけ"}</button>`
     +`<button class="qb" type="button" data-open="lvBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg>レベル・テーマ<small>${esc(lv)}${th?" ／ "+th:""}</small></button>`
-    +`<button class="qb" type="button" data-open="setBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>`
     +`<button class="qb" type="button" data-open="listBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>単語一覧</button>`;
   el.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(qbOpen===b.dataset.open));b.onclick=()=>openPanel(b.dataset.open)});
   // 押したらすぐ始めず、スタートの画面を出す
@@ -5530,7 +5547,7 @@ $("#grIn").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)askGrammar($("#grIn"
 const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 function curTheme(){const a=document.documentElement.getAttribute("data-theme");if(a==="dark"||a==="light")return a;return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}
-function paintThemeBtn(){const d=curTheme()==="dark";$("#themeBtn").innerHTML=(d?SUN:MOON)+(d?"ライト":"ダーク");$("#themeBtn").setAttribute("aria-label",d?"ライトモードにする":"ダークモードにする")}
+function paintThemeBtn(){const d=curTheme()==="dark";$("#themeBtn").innerHTML=(d?SUN:MOON)+`<span class="tlabel">${d?"ライト":"ダーク"}</span>`;$("#themeBtn").setAttribute("aria-label",d?"ライトモードにする":"ダークモードにする")}
 function setTheme(t){document.documentElement.setAttribute("data-theme",t);try{localStorage.setItem(LS+"-theme",t)}catch(e){}paintThemeBtn()}
 try{const t=localStorage.getItem(LS+"-theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}
 paintThemeBtn();
@@ -5746,7 +5763,13 @@ $("#repBox").ontoggle=renderReports;
 $("#repReload").onclick=()=>{repAll=null;renderReports();loadReports()};
 
 /* ---------- tabs ---------- */
+let curTab="cards",prevTab="cards";
 function showTab(t){
+  if(t!==curTab){if(t==="settings")prevTab=curTab;
+    if(curTab==="settings"){setDraft=null;$("#setDone").textContent="";renderSettings()}   // 設定の画面を出たら、更新していない選びかけは捨てる
+    curTab=t}
+  $("#avBtn").toggleAttribute("aria-current",false);
+  if(t==="settings"){$("#avBtn").setAttribute("aria-current","page");try{if(!localStorage.getItem(LS+"-setseen")){localStorage.setItem(LS+"-setseen","1");renderAvatar()}}catch(e){}}
   document.querySelectorAll(".tabpane").forEach(s=>s.hidden=s.id!=="tab-"+t);
   document.querySelectorAll(".tabs [data-tab]").forEach(b=>b.toggleAttribute("aria-current",false)||b.dataset.tab===t&&b.setAttribute("aria-current","page"));
   if(newTabs.includes(t)){newTabs=newTabs.filter(x=>x!==t);try{localStorage.setItem(LS+"-newtab",JSON.stringify(newTabs))}catch(e){}updNewDots()}
@@ -5754,8 +5777,29 @@ function showTab(t){
   if(t!=="quiz"&&qTimer)pauseQuiz();   // スピードの途中でほかのタブに移ったら、一時停止にしておく
   if(t!=="cards"&&qt&&qtPause===null)pauseQt();   // 3分だけも同じ
   if(t==="quiz"&&(!quiz||quiz.empty))startQuiz();else if(t==="quiz"&&quiz.mode==="speed")renderQuiz();if(t==="listen"&&!ls.w)nextListen();if(t==="diff")renderDfMode();
-  try{localStorage.setItem(LS+"-tab",t)}catch(e){}window.scrollTo(0,0);
+  if(t!=="settings")try{localStorage.setItem(LS+"-tab",t)}catch(e){}
+  window.scrollTo(0,0);
 }
+/* ---------- 右上のボタン：設定の画面（アカウントもここ） ----------
+   設定はカードの下にあって気づかれにくく、ログインも見つけにくかったので、右上の丸いボタンから開く画面にした。
+   ログイン中は、名前の1文字目（漢字・ひらがなもそのまま）を色つきの丸に出す */
+const GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+const PERSON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+const AV_COLORS=["#2340b3","#1d7f55","#bf3a2b","#7a4fb5","#b5651d","#0f7c8c","#c2417a","#4a5d23"];
+function userName(u){const m=(u&&u.user_metadata)||{};return String(m.full_name||m.name||(u&&u.email)||"").trim()}
+function renderAvatar(){
+  const b=$("#avBtn"),nm=sbUser?userName(sbUser):"";
+  if(nm){const ch=Array.from(nm)[0].toUpperCase();let h=0;for(const c of String(sbUser.id))h=(h*31+c.charCodeAt(0))>>>0;
+    b.className="avbtn on";b.style.background=AV_COLORS[h%AV_COLORS.length];b.textContent=ch;b.setAttribute("aria-label",`設定・アカウント（${nm}）`);b.title=nm}
+  else{b.className="avbtn";b.style.background="";let seen=true;try{seen=!!localStorage.getItem(LS+"-setseen")}catch(e){}   // 赤い点は、設定の画面を一度開くまで（ログインがあると気づいてもらうため）
+    b.innerHTML=CAN_CLOUD?PERSON+(seen?"":'<span class="avdot" aria-hidden="true"></span>'):GEAR;
+    b.setAttribute("aria-label",CAN_CLOUD?"設定・ログイン":"設定");b.title=CAN_CLOUD?"設定・ログイン":"設定"}
+  if(curTab==="settings")b.setAttribute("aria-current","page");
+}
+$("#setHost").appendChild($("#setBox"));$("#setBox").open=true;   // 設定のパネルを、設定の画面に移していつも開いておく
+$("#avBtn").onclick=()=>showTab(curTab==="settings"?prevTab:"settings");
+$("#setBack").onclick=()=>showTab(prevTab);
+renderAvatar();
 document.querySelectorAll(".tabs [data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 $("#stats").onclick=()=>{recOpen=!recOpen;renderStats()};
 function renderAll(){renderStats();renderSettings();renderLevels();renderCards();renderList();if(quiz)renderQuiz();if(ls.w||ls.empty)renderListen()}
@@ -5763,7 +5807,6 @@ function renderAll(){renderStats();renderSettings();renderLevels();renderCards()
 $("#setApply").onclick=applyCardSettings;
 // 画面を閉じた・アプリを切り替えたときも、時間を止める
 document.addEventListener("visibilitychange",()=>{if(document.hidden){if(qTimer)pauseQuiz();if(qt&&qtPause===null)pauseQt()}});
-$("#setBox").addEventListener("toggle",()=>{$("#setDone").textContent="";renderSettings()});   // 閉じたら選びかけを捨てる
 // claude.ai の外：AI英会話は始められないので、説明と claude.ai 版への案内だけ出す
 if(!ON_CLAUDE){$("#talkSetup").hidden=true;$("#talkOff").hidden=false;
   $("#talkOff").innerHTML=`<div class="label">AI英会話</div><div><b>AI英会話は claude.ai 版で使えます</b></div>

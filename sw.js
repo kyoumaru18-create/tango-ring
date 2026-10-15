@@ -1,10 +1,10 @@
 // 単語リングのサービスワーカー：電波がなくても開けるように、ページとアイコン・文字（フォント）を端末にとっておく。
 // ページは毎回まずネットから取りに行くので、GitHub に新しい index.html を上げれば、次に開いたときから新しい版になる。
-const CACHE = "tango-ring-v1";
+const CACHE = "tango-ring-v2";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -19,9 +19,11 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // 同じサイトのもの（ページ・アイコン）：ネットから。つながらないときは、とっておいた版
+  // 同じサイトのもの（ページ・アイコン）：ネットから。つながらないときは、とっておいた版。
+  // ブラウザが覚えている古い版（GitHub は10分ほど使い回す）を使わず、毎回新しい版があるか確かめる（no-cache）
   if (url.origin === location.origin) {
-    e.respondWith(fetch(req).then(res => res.ok ? keep(req, res) : res)
+    // ページを開く要求（navigate）にはそのまま設定を足せないので、URL から作り直して取りに行く
+    e.respondWith(fetch(req.url, { cache: "no-cache", credentials: "same-origin" }).then(res => res.ok ? keep(req, res) : res)
       .catch(() => caches.match(req, { ignoreSearch: true })
         .then(m => m || (req.mode === "navigate" ? caches.match("./index.html") : Response.error()))));
     return;
