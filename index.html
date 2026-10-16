@@ -5995,7 +5995,13 @@ $("#repCopyBtn").onclick=async()=>{const t=$("#repCopy");let ok=false;
   if(!ok)try{t.focus();t.select();ok=document.execCommand("copy")}catch(e){}
   $("#repCopyBtn").textContent=ok?"✓ コピーしました":"コピーできませんでした。長押しで選んでコピーしてください";
   if(!ok){t.focus();t.select()}};
-$("#bkExport").onclick=()=>{try{const d=new Date(),name=`tango-ring-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}.json`;
+$("#bkExport").onclick=async()=>{const d=new Date(),name=`tango-ring-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}.json`;
+  // claude.ai の中では、ふつうのダウンロードはできないので downloads の機能で保存する（確認が出る）
+  if(ON_CLAUDE){let dl=null;try{dl=await claude.use("downloads")}catch(e){}
+    if(!dl){bkMsg("この画面ではファイルに保存できません。「文字でコピー」を使ってください。");return}
+    try{await dl.save({filename:name,data:backupText()});bkMsg(`「${name}」を保存しました。`,true)}
+    catch(e){bkMsg(e&&e.code==="declined"?"保存をやめました。":"保存できませんでした。「文字でコピー」を使ってください。")}return}
+  try{
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([backupText()],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();
     setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);bkMsg(`「${name}」を書き出しました（ダウンロードされない場合は「文字でコピー」を使ってください）。`,true)}
   catch(e){bkMsg("書き出せませんでした。「文字でコピー」を使ってください。")}};
