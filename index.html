@@ -348,6 +348,7 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .acctinfo dd{margin:0;overflow-wrap:anywhere}
 .acctconfirm{display:flex;flex-direction:column;gap:8px;border:1px solid var(--bad);background:var(--bad-bg);border-radius:12px;padding:12px 14px}
 .btn.danger{color:var(--bad);border-color:var(--bad)}
+.linkbtn.danger{color:var(--bad)}
 .evsum{display:flex;flex-direction:column;gap:4px;background:var(--paper);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
 .evsum pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0}
 .dgbtn{border-color:var(--accent);color:var(--accent)}
@@ -480,6 +481,18 @@ details.flash{animation:flash 1.2s ease}
           <div class="note">スマホのホーム画面に置くと、アプリのようにアイコンから開けます。一度開いたあとは、電波がなくても使えます。</div>
           <button class="btn" id="pwaBtn" type="button" style="align-self:flex-start" hidden>ホーム画面に追加する</button>
           <div class="note" id="pwaHow"></div>
+        </div>
+        <div class="setgroup">
+          <div class="sethead">記録の控え・削除</div>
+          <div class="note" style="margin:0">進み具合をファイルに保存しておけます。機種変更のときや、もしものときの控えに。読み込むと、今の記録と合わせます（今の記録は消えません）。</div>
+          <div class="row"><button class="btn" id="bkExport" type="button">ファイルに書き出す</button><button class="btn" id="bkCopy" type="button">文字でコピー</button></div>
+          <div class="row"><label class="btn" for="bkFile" style="cursor:pointer">ファイルから読み込む</label><input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden><button class="linkbtn" id="bkPasteBtn" type="button">文字を貼り付けて読み込む</button></div>
+          <textarea id="bkPaste" rows="4" hidden placeholder="書き出した文字をここに貼り付け" aria-label="書き出した文字"></textarea>
+          <button class="btn" id="bkPasteGo" type="button" hidden style="align-self:flex-start">この内容を読み込む</button>
+          <div class="note" id="bkMsg" role="status" style="margin:0"></div>
+          <button class="linkbtn danger" id="bkReset" type="button" style="align-self:flex-start">この端末の進み具合を消す…</button>
+          <div class="acctconfirm" id="bkResetBox" hidden><b>この端末の進み具合を消しますか？</b><div class="note" style="margin:0">覚えた単語・答えた数・設定が、この端末から消えて最初の状態に戻ります。元に戻せません。心配なら先に「ファイルに書き出す」で控えを取ってください。<span id="bkResetExtra"></span></div>
+            <div class="row"><button class="btn danger" id="bkResetYes" type="button">消す</button><button class="btn" id="bkResetNo" type="button">やめる</button></div></div>
         </div>
         <div class="setgroup">
           <div class="sethead">作った人に送る</div>
@@ -4159,7 +4172,7 @@ const goalN=()=>GOAL_CHOICES.includes(state.goal)?state.goal:20;
 function loadLocal(){try{const r=localStorage.getItem(LS);return r?normalize(JSON.parse(r)):null}catch(e){return null}}
 let state=loadLocal()||freshState();
 let dbRef=null,saveTimer=null,saving=false,again=false;
-let lastSaved=0,acctConfirm=false;   // lastSaved：アカウントに最後に保存できた時刻（設定のアカウント欄に出す）
+let lastSaved=0,acctConfirm=false,acctDel=false;   // lastSaved：アカウントに最後に保存できた時刻（設定のアカウント欄に出す）
 const savedText=()=>lastSaved?`最後に保存 ${new Date(lastSaved).getHours()}:${String(new Date(lastSaved).getMinutes()).padStart(2,"0")}`:"保存待ち";
 function save(){state.updated=Date.now();try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}clearTimeout(saveTimer);saveTimer=setTimeout(pushDb,1500);renderStats()}
 async function pushDb(){if(!dbRef)return;if(saving){again=true;return}saving=true;
@@ -4252,7 +4265,11 @@ function renderAcct(){
       <div class="note" style="margin:0">ほかのスマホやパソコンでも、同じ Google アカウントでログインすれば続きからできます。</div>
       ${acctConfirm?`<div class="acctconfirm"><b>ログアウトしますか？</b><div class="note" style="margin:0">この端末の進み具合はそのまま残ります。次にログインすれば、またアカウントの記録と合わせて続きから使えます。</div>
         <div class="row"><button class="btn danger" id="acctOutYes" type="button">ログアウトする</button><button class="btn" id="acctOutNo" type="button">やめる</button></div></div>`
-      :`<div class="row"><button class="btn" id="acctSync" type="button">今すぐ保存する</button><button class="btn danger" id="acctOut" type="button">ログアウト</button></div>`}`
+      :acctDel?`<div class="acctconfirm"><b>アカウントを削除しますか？</b><div class="note" style="margin:0">このアカウントと、アカウントに保存した進み具合がすべて消えます。元に戻せません。送った報告・感想は、名前のない状態で残ります。</div>
+        <label class="check"><input type="checkbox" id="acctDelLocal">この端末の進み具合も消す</label>
+        <div class="row"><button class="btn danger" id="acctDelYes" type="button">削除する</button><button class="btn" id="acctDelNo" type="button">やめる</button></div></div>`
+      :`<div class="row"><button class="btn" id="acctSync" type="button">今すぐ保存する</button><button class="btn danger" id="acctOut" type="button">ログアウト</button></div>
+        <button class="linkbtn danger" id="acctDel" type="button" style="align-self:flex-start">アカウントを削除…</button>`}`
     :`<div class="note" style="margin:0">ログインすると、スマホとパソコンで同じ進み具合を使えます。ブラウザのデータを消しても消えません。今この端末にある進み具合は、そのまま引き継がれます。ログインしなくても使えます。</div>
       <button class="btn gbtn" id="acctIn" type="button" ${sb&&!acctBusy?"":"disabled"}><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Googleでログイン</button>`;
   $("#acctBody").insertAdjacentHTML("beforeend",`${acctMsg?`<div class="err">${esc(acctMsg)}</div>`:""}<div class="note" style="font-size:12px;margin:0"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--accent)">プライバシーポリシー</a></div>`);
@@ -4263,6 +4280,14 @@ function renderAcct(){
   const o=$("#acctOut");if(o)o.onclick=()=>{acctConfirm=true;acctMsg="";renderAcct()};
   const on=$("#acctOutNo");if(on)on.onclick=()=>{acctConfirm=false;renderAcct()};
   const oy=$("#acctOutYes");if(oy)oy.onclick=async()=>{acctConfirm=false;try{await sb.auth.signOut()}catch(e){}sbUser=null;dbRef=null;setSync("この端末に保存");acctMsg="ログアウトしました。この端末の進み具合はそのまま残っています。";checkCloudOwner();renderAcct()};
+  // アカウントの削除：Supabase の delete_my_account（本人だけ。アカウントと進み具合を消し、報告は名前なしにする）
+  const dl=$("#acctDel");if(dl)dl.onclick=()=>{acctDel=true;acctMsg="";renderAcct()};
+  const dn=$("#acctDelNo");if(dn)dn.onclick=()=>{acctDel=false;renderAcct()};
+  const dy=$("#acctDelYes");if(dy)dy.onclick=async()=>{const local=$("#acctDelLocal").checked;dy.disabled=true;dy.textContent="削除中…";
+    try{const {error}=await sb.rpc("delete_my_account");if(error)throw error}
+    catch(e){acctDel=false;acctMsg="削除できませんでした。少し待ってからもう一度どうぞ。";renderAcct();return}
+    try{await sb.auth.signOut()}catch(e){}acctDel=false;sbUser=null;dbRef=null;setSync("この端末に保存");
+    if(local)resetLocal();checkCloudOwner();acctMsg="アカウントを削除しました。"+(local?"この端末の進み具合も消しました。":"この端末の進み具合は残っています。");renderAcct()};
   const sy=$("#acctSync");if(sy)sy.onclick=async()=>{sy.disabled=true;sy.textContent="保存中…";await pushDb();acctMsg="";renderAcct()};
 }
 /* ---------- エラーと使われ方の記録（GitHub 版だけ。名前・メールは送らない） ----------
@@ -4280,6 +4305,18 @@ function flushEvents(){if(!sb)return;const q=evQueue;evQueue=[];q.forEach(r=>sb.
 window.addEventListener("error",e=>logEvent("error",`${e.message||"?"} @${String(e.filename||"").split("/").pop()}:${e.lineno||0}`,true));
 window.addEventListener("unhandledrejection",e=>logEvent("error","promise: "+String((e.reason&&(e.reason.message||e.reason))||"?"),true));
 try{const t=String(dayNum());if(localStorage.getItem(LS+"-lastopen")!==t){localStorage.setItem(LS+"-lastopen",t);logEvent("open","")}}catch(e){}
+/* ---------- 記録の控え（書き出し・読み込み）と、この端末の記録を消す ----------
+   書き出し：{app:"tango-ring",v:1,exported,state} の JSON。読み込みは mergeState で今の記録と合わせる（消さない） */
+const backupText=()=>JSON.stringify({app:"tango-ring",v:1,exported:new Date().toISOString(),state});
+function bkMsg(t,ok){const m=$("#bkMsg");m.textContent=t;m.style.color=ok?"var(--good)":""}
+function importBackup(text){
+  let o;try{o=JSON.parse(String(text).trim())}catch(e){bkMsg("読み込めませんでした。書き出したファイル（または文字）か確かめてください。");return}
+  if(!o||o.app!=="tango-ring"||!o.state||typeof o.state!=="object"){bkMsg("単語リングの控えではないようです。");return}
+  const before=Object.keys(state.cards).length;state=mergeState(state,normalize(o.state));state.updated=Date.now();
+  try{localStorage.setItem(LS,JSON.stringify(state))}catch(e){}save();checkUnlock(true);buildQueue();renderAll();
+  bkMsg(`✓ 読み込みました（始めた単語 ${before}語 → ${Object.keys(state.cards).length}語）。今の記録と合わせてあります。`,true);
+}
+function resetLocal(){state=freshState();ratioFresh=[];try{localStorage.removeItem(LS)}catch(e){}buildQueue();renderAll()}
 const allWords=()=>BASE.concat(state.custom);
 const boxOf=w=>(state.cards[w.id]?state.cards[w.id].box:0);
 function dotsHtml(box){let h='<span class="dots" aria-label="覚え具合 '+box+'/6">';for(let i=1;i<=6;i++)h+='<i class="'+(i<=box?"on":"")+'"></i>';return h+"</span>"}
@@ -5958,6 +5995,23 @@ $("#repCopyBtn").onclick=async()=>{const t=$("#repCopy");let ok=false;
   if(!ok)try{t.focus();t.select();ok=document.execCommand("copy")}catch(e){}
   $("#repCopyBtn").textContent=ok?"✓ コピーしました":"コピーできませんでした。長押しで選んでコピーしてください";
   if(!ok){t.focus();t.select()}};
+$("#bkExport").onclick=()=>{try{const d=new Date(),name=`tango-ring-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}.json`;
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([backupText()],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);bkMsg(`「${name}」を書き出しました（ダウンロードされない場合は「文字でコピー」を使ってください）。`,true)}
+  catch(e){bkMsg("書き出せませんでした。「文字でコピー」を使ってください。")}};
+$("#bkCopy").onclick=async()=>{const t=backupText();let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+  if(ok)bkMsg("✓ コピーしました。メモ帳やメールなどに貼り付けて保存してください。",true);
+  else{const p=$("#bkPaste");p.hidden=false;p.value=t;p.focus();p.select();bkMsg("自動でコピーできなかったので、下の文字を長押し（または Ctrl+C）でコピーしてください。")}};
+$("#bkFile").onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importBackup(r.result);r.onerror=()=>bkMsg("ファイルを読めませんでした。");r.readAsText(f);e.target.value=""};
+$("#bkPasteBtn").onclick=()=>{const p=$("#bkPaste");p.hidden=false;p.value="";$("#bkPasteGo").hidden=false;p.focus()};
+$("#bkPasteGo").onclick=()=>importBackup($("#bkPaste").value);
+$("#bkReset").onclick=()=>{
+  // ログイン中は、消した状態がアカウントにも保存されてしまうので、先にログアウトしてもらう
+  if(!ON_CLAUDE&&sbUser){bkMsg("ログイン中は、この端末だけ消すことはできません（アカウントの記録まで消えてしまうため）。先にログアウトするか、アカウントごと消すときは上のアカウント欄の「アカウントを削除」から。");return}
+  $("#bkResetExtra").textContent=ON_CLAUDE&&dbRef?"claude.ai のアカウントに保存した記録も、同じように消えます。":"";
+  $("#bkResetBox").hidden=false;$("#bkReset").hidden=true};
+$("#bkResetNo").onclick=()=>{$("#bkResetBox").hidden=true;$("#bkReset").hidden=false};
+$("#bkResetYes").onclick=()=>{resetLocal();if(ON_CLAUDE&&dbRef)save();$("#bkResetBox").hidden=true;$("#bkReset").hidden=false;bkMsg("この端末の進み具合を消しました。",true)};
 $("#fbBtn").onclick=()=>openReport(REP.feedback());
 // 届いた報告（作った人だけに見える欄）
 let repAll=null,repDone={},repShow="open",repErr="",cloudOwner=false,evStats=null;
