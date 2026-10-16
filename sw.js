@@ -2,7 +2,7 @@
 // ページは毎回まずネットから取りに行くので、GitHub に新しい index.html を上げれば、次に開いたときから新しい版になる。
 // 単語データ（words.<番号>.js）は中身が変わると名前も変わるので、一度取ったら端末のものを使う（毎回取りに行かない）。
 const CACHE = "tango-ring-v3";
-const WORDS = "./words.3e5698c1.js"; // tools/build_public.py が書き換える
+const WORDS = "./words.5c19e473.js"; // tools/build_public.py が書き換える
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", WORDS];
 const isWords = url => /\/words\.[0-9a-f]+\.js$/.test(url.pathname);
 

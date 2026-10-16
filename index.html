@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.3e5698c1.js" as="script">
+<link rel="preload" href="words.5c19e473.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -326,6 +326,17 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .ipa{font-size:16px;margin-top:2px}
 .ipa-s{font-size:12px;margin-left:6px;vertical-align:middle}
 .quickbar{display:flex;gap:8px;flex-wrap:wrap}
+/* ホーム画面に追加の案内（GitHub 版のスマホだけ） */
+.pwabar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--accent);border-radius:14px;padding:10px 12px}
+.pwabar .pwaicon{width:36px;height:36px;border-radius:9px;flex:none}
+.pwabar .pwatxt{flex:1 1 180px;font-size:14px;line-height:1.5}
+.pwabar .pwatxt small{display:block;color:var(--muted);font-size:12px}
+.pwabar .row{gap:6px;margin-left:auto}
+.pwasteps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.pwasteps li{display:flex;gap:10px;align-items:center;font-size:15px;line-height:1.5}
+.pwasteps .n{width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.pwasteps .ic{display:inline-grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;color:var(--accent);vertical-align:middle;margin:0 2px}
+.pwasteps .ic svg{width:18px;height:18px}
 .qb{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-size:13px;min-height:38px;display:inline-flex;gap:6px;align-items:center;color:var(--ink);min-width:0}
 .qb small{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:14em}
 .qb svg{width:16px;height:16px;flex:none;color:var(--accent)}
@@ -412,6 +423,7 @@ details.flash{animation:flash 1.2s ease}
 
   <!-- CARDS -->
   <section id="tab-cards" class="tabpane" style="display:flex;flex-direction:column;gap:14px">
+    <div class="pwabar" id="pwaBar" hidden></div>
     <div class="quickbar" id="quickbar"></div>
     <div id="cardArea" style="display:flex;flex-direction:column;gap:12px"></div>
     <details id="lvBox">
@@ -641,6 +653,13 @@ details.flash{animation:flash 1.2s ease}
   <div class="drawer-body" id="drawerBody"></div>
 </aside>
 
+<dialog class="rep" id="pwaDlg" aria-labelledby="pwaTitle">
+  <div class="repin">
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b id="pwaTitle" style="font-size:17px">ホーム画面に追加する</b><button class="linkbtn" id="pwaClose" type="button">閉じる</button></div>
+    <div id="pwaSteps"></div>
+  </div>
+</dialog>
+
 <dialog class="rep" id="repDlg" aria-labelledby="repTitle">
   <div class="repin">
     <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b id="repTitle" style="font-size:17px">間違いを報告</b><button class="linkbtn" id="repClose" type="button">閉じる</button></div>
@@ -658,7 +677,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.3e5698c1.js"></script>
+<script src="words.5c19e473.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -1360,7 +1379,7 @@ function closeDrawer(){
   // すべって消えてから、パネルを元の場所に戻す
   drawerTimer=setTimeout(()=>{if(qbOpen)return;const d=$("#"+was);d.open=false;panelHome[was].after(d);$("#drawer").hidden=true;$("#drawerBg").hidden=true},280);
 }
-function renderQuickbar(){const el=$("#quickbar");if(!el)return;
+function renderQuickbar(){const el=$("#quickbar");if(!el)return;if(typeof renderPwaBar==="function")renderPwaBar();
   el.hidden=!helloDone&&!Object.keys(state.cards).length;   // 初回の案内の間は出さない
   const lv=state.levels.map(l=>LEVELS[l].name).join("・"),th=state.themes.length===THEME_KEYS.length?"":"テーマ"+state.themes.length+"つ";   // スマホで2行に収まるよう短く
   el.innerHTML=`<button class="qb qt" type="button" id="qtBtn" ${qt?'aria-pressed="true"':""}>⏱ ${qt?"3分 実行中":"3分だけ"}</button>`
@@ -2770,18 +2789,51 @@ if(!ON_CLAUDE&&/^https:|^http:\/\/localhost/.test(location.href)){
   if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
   // Android の Chrome などでは、ボタンからそのまま追加できる
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;renderPwa()});
-  window.addEventListener("appinstalled",()=>{installEvt=null;renderPwa()});
+  window.addEventListener("appinstalled",()=>{installEvt=null;try{localStorage.setItem(LS+"-pwahide","9e15")}catch(e){}renderPwa()});
 }
 function renderPwa(){
   const g=$("#pwaGroup");if(!g)return;g.hidden=ON_CLAUDE;if(ON_CLAUDE)return;
-  if(isStandalone()){$("#pwaBtn").hidden=true;$("#pwaHow").textContent="ホーム画面から開いています。";return}
-  $("#pwaBtn").hidden=!installEvt;
-  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  if(isStandalone()){$("#pwaBtn").hidden=true;renderPwaBar();$("#pwaHow").textContent="ホーム画面から開いています。";return}
+  $("#pwaBtn").hidden=!installEvt;renderPwaBar();
+  const ios=isIOS();
   $("#pwaHow").innerHTML=(installEvt?"":ios?"<b>iPhone・iPad（Safari）</b>：下の共有ボタン（□に↑）→「ホーム画面に追加」。"
       :"<b>Android（Chrome）</b>：右上の︙ →「ホーム画面に追加」または「アプリをインストール」。<br><b>iPhone（Safari）</b>：共有ボタン（□に↑）→「ホーム画面に追加」。")
     +(ios?"<br>※ iPhone では、ホーム画面から開いたときと Safari で開いたときで、進み具合が別々に保存されます。追加したら、ホーム画面のほうで続けてください。":"");
 }
-$("#pwaBtn").onclick=async()=>{if(!installEvt)return;installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;renderPwa()};
+function isIOS(){return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1)}
+function isPhone(){return isIOS()||/Android/i.test(navigator.userAgent)}
+async function doInstall(){if(!installEvt)return;installEvt.prompt();let ok=false;try{ok=(await installEvt.userChoice).outcome==="accepted"}catch(e){}
+  installEvt=null;logEvent("feature","ホーム画面に追加:"+(ok?"追加":"やめた"));renderPwa()}
+$("#pwaBtn").onclick=doInstall;
+/* カードの上の案内：スマホで、ホーム画面から開いていない人に出す（「あとで」は3日、「もう出さない」はずっと隠す） */
+function renderPwaBar(){const el=$("#pwaBar");if(!el)return;
+  let hide=0;try{hide=+localStorage.getItem(LS+"-pwahide")||0}catch(e){}
+  const show=!ON_CLAUDE&&CAN_CLOUD&&isPhone()&&!isStandalone()&&helloDone&&!diag&&Date.now()>hide;
+  el.hidden=!show;if(!show)return;
+  el.innerHTML=`<img class="pwaicon" src="icon-192.png" alt="">
+    <div class="pwatxt"><b>ホーム画面に追加すると、アプリのように使えます</b><small>アイコンからすぐ開けて、電波がなくても使えます（無料）</small></div>
+    <div class="row"><button class="btn primary" type="button" id="pwaGo">${installEvt?"追加する":"やり方を見る"}</button><button class="linkbtn" type="button" id="pwaLater">あとで</button></div>`;
+  $("#pwaGo").onclick=()=>{if(installEvt)doInstall();else openPwaHow()};
+  $("#pwaLater").onclick=()=>{try{localStorage.setItem(LS+"-pwahide",String(Date.now()+3*864e5))}catch(e){}renderPwaBar()};
+}
+function openPwaHow(){
+  const ios=isIOS(),otherBrowser=/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+  const step=(n,html)=>`<li><span class="n">${n}</span><span>${html}</span></li>`;
+  let h=ios
+    ?`<ol class="pwasteps">${step(1,otherBrowser?`アドレスバーの横にある共有ボタン <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5v10h14V11h-1"/></svg></span> を押す`:`画面の下にある共有ボタン <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5v10h14V11h-1"/></svg></span> を押す<br><small class="muted">（iPad は右上）</small>`)
+      +step(2,`下のほうにある「ホーム画面に追加」 <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></span> を押す`)+step(3,"右上の「追加」を押す")+step(4,"ホーム画面の「単語リング」のアイコンから開く")}</ol>`
+    :`<ol class="pwasteps">${step(1,"右上の︙（点が3つ）を押す")+step(2,"「ホーム画面に追加」または「アプリをインストール」を押す")+step(3,"ホーム画面の「単語リング」のアイコンから開く")}</ol>`;
+  if(ios)h+=`<div class="note" style="margin-top:12px">※ iPhone では、ホーム画面から開いたときと Safari で開いたときで、進み具合が別々に保存されます。${sbUser?"ログインしているので、ホーム画面から開いてもう一度ログインすれば、同じ記録が続きます。":"<b>Googleでログインしておく</b>と、どちらで開いても同じ記録を使えます。"}</div>`
+    +(sbUser?"":`<div class="row" style="margin-top:8px"><button class="btn" type="button" id="pwaLogin">ログインの画面を開く</button></div>`);
+  h+=`<div class="row" style="margin-top:14px;justify-content:space-between"><button class="linkbtn" type="button" id="pwaNever">この案内をもう出さない</button><button class="btn primary" type="button" id="pwaOk">わかった</button></div>`;
+  $("#pwaSteps").innerHTML=h;
+  const d=$("#pwaDlg");if(d.showModal)d.showModal();else d.setAttribute("open","");
+  const close=()=>{if(d.close)d.close();else d.removeAttribute("open")};
+  $("#pwaClose").onclick=close;$("#pwaOk").onclick=close;
+  $("#pwaNever").onclick=()=>{try{localStorage.setItem(LS+"-pwahide","9e15")}catch(e){}close();renderPwaBar()};
+  const lg=$("#pwaLogin");if(lg)lg.onclick=()=>{close();openPanel("setBox")};
+  logEvent("feature","ホーム画面に追加:やり方",true);
+}
 renderPwa();
 checkUnlock(true);buildQueue();renderScen();renderAll();updNewDots();
 samplePromise.then(s=>{if(!s)aiOff=true});
