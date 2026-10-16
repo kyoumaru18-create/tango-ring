@@ -348,6 +348,13 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .acctinfo dd{margin:0;overflow-wrap:anywhere}
 .acctconfirm{display:flex;flex-direction:column;gap:8px;border:1px solid var(--bad);background:var(--bad-bg);border-radius:12px;padding:12px 14px}
 .btn.danger{color:var(--bad);border-color:var(--bad)}
+.evsum{display:flex;flex-direction:column;gap:4px;background:var(--paper);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
+.evsum pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0}
+.dgbtn{border-color:var(--accent);color:var(--accent)}
+.dgres{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.dgres div{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--paper);border-radius:10px;padding:8px 4px;font-size:13px}
+.dgres b{color:var(--accent);letter-spacing:.1em}
+.dgres small{color:var(--muted)}
 .gbtn{align-self:flex-start;display:inline-flex;gap:10px;align-items:center;background:#fff;color:#1f1f1f;border:1px solid #747775;font-weight:500}
 .gbtn svg{width:18px;height:18px;flex:none}
 .chip.used{background:var(--good-bg);color:var(--good)}
@@ -413,6 +420,7 @@ details.flash{animation:flash 1.2s ease}
         <div class="dfchips" id="thchips"></div>
         <div class="note" id="lvCount" style="margin:0"></div>
         <button class="btn primary" id="lvApply" disabled>この内容で更新する</button>
+        <button class="linkbtn" id="lvDiag" type="button" style="align-self:flex-start">どれがいいか迷ったら：かんたんレベル診断（1分）</button>
         <div id="lvMsg" class="err"></div>
         <div id="lvDone" class="note" style="color:var(--good)"></div>
         <div class="note">選んだレベルとテーマから新しいカードが出ます（どちらも複数選択可）。クイズとリスニングも同じ範囲から出題します。</div><div class="note" style="font-size:12px">単語のレベルはCEFR-J Wordlist（東京外国語大学 投野由紀夫研究室）と Octanove Vocabulary Profile C1/C2（CC BY-SA 4.0）で判定し、英検・TOEICとは文部科学省などが公表しているCEFR対照表で対応づけています。リストにない語は、内容を見て判定しています（多くは上級）。一部の語は、日常での使われ方を見て調整しています。級・スコアはあくまで目安です。単語・例文・文法の説明は点検していますが、まちがいが残っている可能性があります。発音記号（アメリカ英語）は CMU Pronouncing Dictionary（Copyright © 1993-2015 Carnegie Mellon University）をもとに作成しています。</div>
@@ -4201,7 +4209,7 @@ function mergeState(a,b){
 const loadScript=src=>new Promise((ok,ng)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
 async function initCloud(){
   if(!CAN_CLOUD)return;renderAcct();
-  try{await loadScript(SB_JS);sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:"pkce",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}})}
+  try{await loadScript(SB_JS);sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{flowType:"pkce",persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});flushEvents()}
   catch(e){acctMsg="ログインの準備ができませんでした（電波のないところでは使えません）。";renderAcct();return}
   sb.auth.onAuthStateChange((ev,s)=>{const u=s&&s.user||null;if((u&&u.id)===(sbUser&&sbUser.id))return;sbUser=u;
     if(sbUser)setTimeout(cloudSync,0);else{dbRef=null;setSync("この端末に保存")}renderAcct()});
@@ -4257,6 +4265,21 @@ function renderAcct(){
   const oy=$("#acctOutYes");if(oy)oy.onclick=async()=>{acctConfirm=false;try{await sb.auth.signOut()}catch(e){}sbUser=null;dbRef=null;setSync("この端末に保存");acctMsg="ログアウトしました。この端末の進み具合はそのまま残っています。";checkCloudOwner();renderAcct()};
   const sy=$("#acctSync");if(sy)sy.onclick=async()=>{sy.disabled=true;sy.textContent="保存中…";await pushDb();acctMsg="";renderAcct()};
 }
+/* ---------- エラーと使われ方の記録（GitHub 版だけ。名前・メールは送らない） ----------
+   Supabase の events 表に insert だけする（読めるのは作った人だけ）。端末ごとのでたらめな番号（dev）で人数を数える。
+   送るもの：その日はじめて開いた／開いたタブ（1回の起動で1回）／診断・3分・スピードを使った／エラーの文面。1回の起動で最大40件 */
+const APP_VER="2026-10-16";
+let devId="";try{devId=localStorage.getItem(LS+"-dev")||"";if(!devId){devId=Math.random().toString(36).slice(2,12);localStorage.setItem(LS+"-dev",devId)}}catch(e){}
+let evCount=0,evQueue=[];const evSent=new Set();
+function logEvent(kind,detail="",once=false){
+  if(ON_CLAUDE||!CAN_CLOUD)return;const key=kind+"|"+detail;if(once){if(evSent.has(key))return;evSent.add(key)}if(++evCount>40)return;
+  const row={kind:String(kind).slice(0,20),detail:String(detail).slice(0,500),dev:devId||null,ver:APP_VER,mobile:/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)};
+  if(!sb){evQueue.push(row);return}sb.from("events").insert(row).then(()=>{},()=>{});
+}
+function flushEvents(){if(!sb)return;const q=evQueue;evQueue=[];q.forEach(r=>sb.from("events").insert(r).then(()=>{},()=>{}))}
+window.addEventListener("error",e=>logEvent("error",`${e.message||"?"} @${String(e.filename||"").split("/").pop()}:${e.lineno||0}`,true));
+window.addEventListener("unhandledrejection",e=>logEvent("error","promise: "+String((e.reason&&(e.reason.message||e.reason))||"?"),true));
+try{const t=String(dayNum());if(localStorage.getItem(LS+"-lastopen")!==t){localStorage.setItem(LS+"-lastopen",t);logEvent("open","")}}catch(e){}
 const allWords=()=>BASE.concat(state.custom);
 const boxOf=w=>(state.cards[w.id]?state.cards[w.id].box:0);
 function dotsHtml(box){let h='<span class="dots" aria-label="覚え具合 '+box+'/6">';for(let i=1;i<=6;i++)h+='<i class="'+(i<=box?"on":"")+'"></i>';return h+"</span>"}
@@ -4454,6 +4477,46 @@ function updBadge(){const b=document.querySelector('.tabs [data-tab="cards"]');i
   s.setAttribute("aria-label","残り"+queue.length+"枚")}
 // 初めて開いた人への案内（カードを1枚も進めていないときだけ。「はじめる」を押したら出さない）
 let helloDone=false;try{helloDone=!!localStorage.getItem(LS+"-hello")}catch(e){}
+/* ---------- かんたんレベル診断（12問・1分） ----------
+   基礎・標準・応用・上級から3語ずつ、4択で意味を選ぶ（わからないも可）。2問以上正解したレベルは「だいたい知っている」とみなし、
+   はじめて2問未満だったレベルとその1つ上をすすめる（例：基礎はできて標準が苦手 → 標準・応用）。結果はすすめるだけで、選び直せる */
+let diag=null;   // {qs:[{w,opts,pick}], i, from:"hello"|"panel"}
+function startDiag(from){
+  const ws=allWords().filter(w=>w.lv&&w.pos!=="phrase"&&!/\s/.test(w.w));
+  const qs=[];for(const lv of [1,2,3,4]){const pool=shuffle(ws.filter(w=>w.lv===lv)).slice(0,3);
+    for(const w of pool){const seen=new Set([w.ja]),ds=[];
+      for(const x of shuffle(ws.filter(x=>x.lv===lv&&x.pos===w.pos&&x.id!==w.id))){if(ds.length>=3)break;if(!seen.has(x.ja)){seen.add(x.ja);ds.push(x)}}
+      qs.push({w,opts:shuffle([w,...ds]),pick:null})}}
+  diag={qs:shuffle(qs),i:0,from};closeDrawer();renderCards();window.scrollTo(0,0);
+}
+function diagResult(){
+  const ok={1:0,2:0,3:0,4:0};diag.qs.forEach(q=>{if(q.pick===q.w.id)ok[q.w.lv]++});
+  let L=[1,2,3,4].find(l=>ok[l]<2)||4;const levels=L>=4?[3,4]:[L,L+1];
+  return {ok,levels};
+}
+function renderDiag(area){
+  if(diag.i<diag.qs.length){
+    const q=diag.qs[diag.i];
+    area.innerHTML=`<div class="panel fade"><div class="row" style="justify-content:space-between"><div class="label">かんたんレベル診断</div><button class="linkbtn" id="dgStop" type="button">やめる</button></div>
+      <div class="progress"><span>${diag.i+1} / ${diag.qs.length}</span><span>知っている意味を選んでください</span></div><div class="bar"><i style="width:${diag.i/diag.qs.length*100}%"></i></div>
+      <div class="qbig" style="margin-top:6px">${esc(q.w.w)}</div><div class="note" style="margin:0">${POS_JA[q.w.pos]||""}</div>
+      <div class="opts">${q.opts.map(o=>`<button class="opt" data-dg="${o.id}"><span>${esc(o.ja)}</span></button>`).join("")}</div>
+      <button class="btn ghost" id="dgDk" style="align-self:flex-start">わからない</button></div>`;
+    const next=pick=>{q.pick=pick;diag.i++;renderDiag(area)};
+    area.querySelectorAll("[data-dg]").forEach(b=>b.onclick=()=>next(b.dataset.dg));$("#dgDk").onclick=()=>next("?");
+    $("#dgStop").onclick=()=>{diag=null;renderCards()};return}
+  const {ok,levels}=diagResult(),names=levels.map(l=>LEVELS[l].name).join("・"),eiken=levels.map(l=>LEVELS[l].eiken).join("／");
+  area.innerHTML=`<div class="panel fade"><div class="label">診断の結果</div>
+    <div style="font-size:18px;font-weight:700">おすすめは「${esc(names)}」</div><div class="note" style="margin:0">${esc(eiken)} くらいの単語です。</div>
+    <div class="dgres">${[1,2,3,4].map(l=>`<div><span>${LEVELS[l].name}</span><b>${"●".repeat(ok[l])}${"○".repeat(3-ok[l])}</b><small>${ok[l]}/3</small></div>`).join("")}</div>
+    <div class="note" style="margin:0">だいたいわかったレベルは飛ばして、少し難しいところから始めます。あとで「レベル・テーマ」からいつでも変えられます。</div>
+    <div class="row"><button class="btn primary" id="dgUse" type="button">このレベルではじめる</button><button class="btn" id="dgSelf" type="button">自分で選ぶ</button></div></div>`;
+  logEvent("feature","診断 "+[1,2,3,4].map(l=>ok[l]).join("")+" → "+levels.join(","),true);
+  $("#dgUse").onclick=()=>{state.levels=levels;ratioFresh=pickFresh(npd()).map(w=>w.id);const from=diag.from;diag=null;
+    if(from==="hello"){helloDone=true;try{localStorage.setItem(LS+"-hello","1")}catch(e){}}
+    save();buildQueue();renderLevels();renderCards();renderQuickbar();window.scrollTo(0,0)};
+  $("#dgSelf").onclick=()=>{const from=diag.from;diag=null;renderCards();if(from!=="hello")openPanel("lvBox")};
+}
 function renderHello(area){
   area.innerHTML=`<div class="panel fade">
     <div class="label">Welcome</div>
@@ -4465,6 +4528,7 @@ function renderHello(area){
     </ol>
     <div class="note">いつでも好きなだけ続けられます。8枚ごとに区切って結果が出て、覚えてきたら新しい単語が自動で足されます（1回の数は設定で5〜100に変えられます）。カードで覚えた単語が、クイズ・リスニング・AI英会話にも出てきます。</div>
     <div class="label" style="margin-top:4px">レベルを選ぶ（いくつでも。あとで変えられます）</div>
+    <button class="btn dgbtn" id="helloDiag" type="button">迷ったら：かんたん診断で選ぶ（1分・12問）</button>
     <div class="scen" id="helloLv">${Object.entries(LEVELS).map(([k,L])=>`<button data-lv="${k}" aria-pressed="${state.levels.includes(+k)}"><b>${L.name}</b><span>${L.eiken}</span></button>`).join("")}</div>
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」</b>ボタンと、右上の<b>設定ボタン（丸いアイコン）</b>からいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
@@ -4474,10 +4538,12 @@ function renderHello(area){
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
     state.levels=on?state.levels.filter(x=>x!==lv):state.levels.concat(lv).sort();renderHello(area)});
+  $("#helloDiag").onclick=()=>startDiag("hello");
   $("#helloGo").onclick=()=>{helloDone=true;try{localStorage.setItem(LS+"-hello","1")}catch(e){}save();buildQueue();renderLevels();renderCards();window.scrollTo(0,0)};
 }
 function renderCards(){
   updBadge();
+  if(diag){renderDiag($("#cardArea"));return}
   if(!helloDone&&!Object.keys(state.cards).length){renderHello($("#cardArea"));return}
   const area=$("#cardArea");const q=queue[0];const w=q&&byId(wid(q));
   if(q&&!w){queue.shift();renderCards();return}
@@ -4669,6 +4735,7 @@ function renderLevels(){
     $("#lvMsg").textContent="";$("#lvDone").innerHTML="";lvDraft=on?lvDraft.filter(x=>x!==lv):lvDraft.concat(lv).sort();renderLevels()});
 }
 let lvDraft=null,thDraft=null;
+$("#lvDiag").onclick=()=>startDiag("panel");
 $("#lvBox").ontoggle=()=>{$("#lvDone").innerHTML="";renderLevels()};
 // レベルを反映：カード・クイズ・リスニングを作り直す。新しいカードはすぐ新しいレベルから出る
 $("#lvApply").onclick=()=>{
@@ -4913,7 +4980,7 @@ function renderQuiz(){
     a.innerHTML=quizModeHtml()+`<div class="note" style="margin:0">${quiz.qs.length}問 ・ 1問 ${QSEC[quiz.secDraft].s}秒${b?` ・ 自己ベスト ${b.score}問正解（平均${b.avg}秒）`:""}</div>
       <button class="btn primary" id="qStart" style="align-self:flex-start;min-width:12em">${changed?"この時間でスタート":"スタート"}</button>`;
     bindQuizMode();
-    $("#qStart").onclick=()=>{if(quiz.secDraft!==qSecKey()){state.quizSec=quiz.secDraft;save()}quiz.ready=false;renderQuiz()};$("#qStart").focus();return}
+    $("#qStart").onclick=()=>{logEvent("feature","スピード "+QSEC[quiz.secDraft].s+"秒");if(quiz.secDraft!==qSecKey()){state.quizSec=quiz.secDraft;save()}quiz.ready=false;renderQuiz()};$("#qStart").focus();return}
   if(sp&&quiz.paused){   // 一時停止中（問題は隠す）
     a.innerHTML=`<div class="qhead"><span>QUIZ ・ スピード ${QSEC[qSecKey()].s}秒</span><span>${quiz.i+1} / ${quiz.qs.length}　正解 ${quiz.score}</span></div>
       <div class="panel done fade" style="box-shadow:none"><b>一時停止中</b><div class="note">時間は止まっています。問題は再開すると出ます。</div>
@@ -5723,7 +5790,7 @@ const qtLeft=()=>qt?Math.max(0,qt.end-Date.now()):0;
 const fmtMs=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
 function startQt(){
   if(cram)buildQueue();
-  qt={end:Date.now()+QT_MS};qtDone=false;qtBye=false;qtReady=false;qtPause=null;ratioBreak=false;sess=newSess();
+  logEvent("feature","3分だけ");qt={end:Date.now()+QT_MS};qtDone=false;qtBye=false;qtReady=false;qtPause=null;ratioBreak=false;sess=newSess();
   clearInterval(qtTimer);qtTimer=setInterval(qtTick,1000);renderQuickbar();renderCards();window.scrollTo(0,0);
 }
 function stopQt(){qt=null;qtDone=false;qtPause=null;clearInterval(qtTimer);renderQuickbar()}
@@ -5893,7 +5960,13 @@ $("#repCopyBtn").onclick=async()=>{const t=$("#repCopy");let ok=false;
   if(!ok){t.focus();t.select()}};
 $("#fbBtn").onclick=()=>openReport(REP.feedback());
 // 届いた報告（作った人だけに見える欄）
-let repAll=null,repDone={},repShow="open",repErr="",cloudOwner=false;
+let repAll=null,repDone={},repShow="open",repErr="",cloudOwner=false,evStats=null;
+const TAB_JA={cards:"カード",words:"単語",quiz:"クイズ",listen:"リスニング",diff:"使い分け",talk:"AI英会話"};
+function evHtml(){if(!cloudOwner||!evStats)return "";const e=evStats,li=a=>a.slice(0,6).map(([k,n])=>`${esc(TAB_JA[k]||k)} ${n}`).join(" ・ ")||"なし";
+  return `<div class="evsum"><div class="label">使われ方（この7日・名前なし）</div>
+    <div>使った端末 <b>${e.devs}</b>台（スマホ ${e.mobile}）・ 開いた日数の合計 <b>${e.opens}</b></div>
+    <div class="note" style="margin:0">よく開くタブ：${li(e.tabs)}</div><div class="note" style="margin:0">使った機能：${li(e.features)}</div>
+    ${e.errors.length?`<div class="err" style="margin:0">エラー ${e.errors.reduce((x,[,n])=>x+n,0)}件</div><pre>${esc(e.errors.slice(0,8).map(([k,n])=>`${n}× ${k}`).join("\n"))}</pre>`:`<div class="note" style="margin:0;color:var(--good)">エラーはありません</div>`}</div>`}
 // GitHub 版：ログインした人が作った人かどうかを Supabase に聞く（is_report_owner。読めるのは作った人だけ）
 async function checkCloudOwner(){
   cloudOwner=false;if(sb&&sbUser)try{const {data}=await sb.rpc("is_report_owner");cloudOwner=data===true}catch(e){}
@@ -5906,6 +5979,12 @@ async function loadReports(){
       repAll=data.map(x=>{if(x.done)repDone[x.id]=true;
         return {id:x.id,key:x.id,at:Date.parse(x.created_at),kind:x.kind,what:x.what||"",reason:x.reason||"",text:x.body||"",ctx:x.ctx||{},
           who:!x.user_id?"ゲスト（ログインなし）":x.user_id===sbUser.id?"自分":"利用者"+(ids.indexOf(x.user_id)+1)}});
+      // 使われ方（この7日）
+      try{const since=new Date(Date.now()-7*864e5).toISOString();
+        const ev=await sb.from("events").select("kind,detail,dev,mobile").gte("created_at",since).limit(5000);
+        if(!ev.error){const rows=ev.data,devs=new Set(rows.map(r=>r.dev).filter(Boolean)),cnt=k=>rows.filter(r=>r.kind===k);
+          const tally=a=>Object.entries(a.reduce((m,r)=>(m[r.detail]=(m[r.detail]||0)+1,m),{})).sort((x,y)=>y[1]-x[1]);
+          evStats={devs:devs.size,mobile:new Set(rows.filter(r=>r.mobile).map(r=>r.dev)).size,opens:cnt("open").length,tabs:tally(cnt("tab")),features:tally(cnt("feature")),errors:tally(cnt("error"))}}}catch(e){}
     }catch(e){repErr="読み込めませんでした。少し待って「読み込み直す」を押してください。";repAll=repAll||[]}
     renderReports();return}
   const r=await repCtx();if(!r||!r.owner)return;$("#repBox").hidden=false;repErr="";
@@ -5924,7 +6003,7 @@ function renderReports(){
   $("#repMode").innerHTML=[["open",`未対応（${open.length}）`],["all",`すべて（${all.length}）`]].map(([k,l])=>`<button data-m="${k}" aria-pressed="${repShow===k}">${l}</button>`).join("");
   $("#repMode").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{repShow=b.dataset.m;renderReports()});
   const list=repShow==="open"?open:all,fmt=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,"0")}`};
-  $("#repList").innerHTML=(repErr?`<div class="err">${esc(repErr)}</div>`:"")+(list.map(x=>`<div class="rpitem${repDone[x.key]?" done":""}">
+  $("#repList").innerHTML=evHtml()+(repErr?`<div class="err">${esc(repErr)}</div>`:"")+(list.map(x=>`<div class="rpitem${repDone[x.key]?" done":""}">
       <div class="rphead"><span>${fmt(x.at||0)}</span><span>${esc(x.who)}</span><span class="chip" style="margin:0">${esc(KIND_JA[x.kind]||x.kind)}</span>${x.reason?`<span class="chip weak" style="margin:0">${esc(x.reason)}</span>`:""}</div>
       ${x.kind!=="feedback"?`<b>${esc(x.what)}</b>`:""}${x.text?`<div>${esc(x.text)}</div>`:""}
       ${Object.keys(x.ctx||{}).length?`<pre>${esc(Object.entries(x.ctx).map(([k,v])=>k+"："+v).join("\n"))}</pre>`:""}
@@ -5942,7 +6021,7 @@ $("#repReload").onclick=()=>{repAll=null;renderReports();loadReports()};
 
 /* ---------- tabs ---------- */
 function showTab(t){
-  closeDrawer();
+  closeDrawer();logEvent("tab",t,true);
   document.querySelectorAll(".tabpane").forEach(s=>s.hidden=s.id!=="tab-"+t);
   document.querySelectorAll(".tabs [data-tab]").forEach(b=>b.toggleAttribute("aria-current",false)||b.dataset.tab===t&&b.setAttribute("aria-current","page"));
   if(newTabs.includes(t)){newTabs=newTabs.filter(x=>x!==t);try{localStorage.setItem(LS+"-newtab",JSON.stringify(newTabs))}catch(e){}updNewDots()}
