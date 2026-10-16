@@ -46,7 +46,9 @@ button{cursor:pointer}
 .brand h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.04em}
 .ring{width:22px;height:22px;border-radius:50%;border:3px solid var(--ink);position:relative;flex:none}
 .ring::after{content:"";position:absolute;right:-7px;top:6px;width:9px;height:4px;border-radius:2px;background:var(--margin)}
-.sync{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+.sync{margin-left:auto;font-size:11px;color:var(--muted);letter-spacing:.02em;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;min-height:28px;max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.sync.cloud{color:var(--good);border-color:var(--good)}
+@media (max-width:420px){.sync{max-width:9em}}
 .themebtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 12px 4px 10px;font-size:12px;min-height:34px;flex:none}
 .themebtn svg{width:16px;height:16px}
 /* 右上の設定・アカウントのボタン（ログイン中は名前の1文字目） */
@@ -394,7 +396,7 @@ details.flash{animation:flash 1.2s ease}
 
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span class="ring" aria-hidden="true"></span><h1>単語リング</h1><span class="sync" id="sync">この端末に保存</span><button class="themebtn" id="themeBtn" type="button" aria-label="表示を切り替え"></button><button class="avbtn" id="avBtn" type="button" aria-label="設定・アカウント"></button></div>
+    <div class="brand"><span class="ring" aria-hidden="true"></span><h1>単語リング</h1><button class="sync" id="sync" type="button" title="保存先を見る">この端末に保存</button><button class="themebtn" id="themeBtn" type="button" aria-label="表示を切り替え"></button><button class="avbtn" id="avBtn" type="button" aria-label="設定・アカウント"></button></div>
     <button class="stats statsbtn" id="stats" type="button" aria-expanded="false" aria-controls="rec"></button>
   </header>
   <section class="panel rec" id="rec" hidden aria-label="学習の記録"></section>
@@ -4156,7 +4158,15 @@ async function pushDb(){if(!dbRef)return;if(saving){again=true;return}saving=tru
   try{await dbRef.set(JSON.parse(JSON.stringify(state)));setSync("アカウントに保存済み");lastSaved=Date.now();const el=document.getElementById("acctSaved");if(el)el.textContent=savedText()}
   catch(e){if(e&&e.code==="invalid_argument"){dbRef=null;setSync("この端末に保存")}else setSync("保存待ち…")}
   saving=false;if(again){again=false;pushDb()}}
-function setSync(t){$("#sync").textContent=t}
+// ヘッダーの保存先：「どのアカウントに」保存しているかまで出す。押すと設定（アカウント欄）を開く
+let syncState="この端末に保存";
+function setSync(t){syncState=t;renderSync();if(typeof renderAcct==="function"&&qbOpen==="setBox")renderAcct()}
+function renderSync(){
+  const el=$("#sync"),ok=syncState==="アカウントに保存済み";
+  const who=!ok?"":ON_CLAUDE?"claude.ai アカウント":(typeof sbUser!=="undefined"&&sbUser?(userName(sbUser)||"アカウント"):"アカウント");
+  el.textContent=ok?`☁ ${who}に保存済み`:syncState==="この端末に保存"&&CAN_CLOUD?"この端末に保存（ログインで同期）":syncState;
+  el.classList.toggle("cloud",ok);el.title=ok?`${who}に保存しています（押すと確認できます）`:"保存先を見る";
+}
 async function initDb(){
   if(!window.claude||!window.claude.use)return;
   try{
@@ -4211,7 +4221,18 @@ async function cloudSync(){
 }
 function renderAcct(){
   if(typeof renderAvatar==="function")renderAvatar();
-  const g=$("#acctGroup");if(!g)return;g.hidden=!CAN_CLOUD;if(!CAN_CLOUD)return;
+  const g=$("#acctGroup");if(!g)return;
+  if(ON_CLAUDE){g.hidden=false;   // claude.ai 版：claude.ai のアカウントに保存している（名前は claude.ai の画面右下などで確認）
+    const ok=syncState==="アカウントに保存済み";
+    $("#acctBody").innerHTML=`<div class="acctcard"><dl class="acctinfo">
+        <div><dt>保存先</dt><dd>${ok?`claude.ai のアカウント（<span id="acctSaved">${savedText()}</span>）`:"この端末だけ（claude.ai のアカウントには保存できていません）"}</dd></div>
+        <div><dt>このアカウントの記録</dt><dd>始めた単語 ${Object.keys(state.cards).length}語 ・ 定着 ${allWords().filter(w=>boxOf(w)>=MASTER).length}語 ・ 答えた数 ${Object.values(state.days).reduce((x,n)=>x+(n||0),0)}枚</dd></div></dl></div>
+      <div class="note" style="margin:0">${ok?"今 claude.ai にログインしているアカウントに保存しています。同じアカウントで claude.ai にログインすれば、ほかの端末でも続きから使えます。どのアカウントかは、claude.ai の画面（左下のアイコン）で確認できます。"
+        :"リンクで開いている場合など、claude.ai のアカウントに保存できないことがあります。そのときは、この端末に保存しています。"}</div>`;
+    return}
+  if(!CAN_CLOUD){g.hidden=false;   // パソコンのファイルを直接開いたとき：ログインは使えないので、公開しているページへ案内
+    $("#acctBody").innerHTML=`<div class="note" style="margin:0">今はパソコンのファイルを直接開いているので、ログインは使えません（進み具合はこの端末に保存しています）。Google でログインするには、インターネット上のページで開いてください：<a href="https://kyoumaru18-create.github.io/tango-ring/" target="_blank" rel="noopener" style="color:var(--accent)">単語リングを開く</a></div>`;return}
+  g.hidden=false;
   const name=sbUser?(sbUser.email||(sbUser.user_metadata||{}).name||"ログイン中"):"";
   $("#acctBody").innerHTML=sbUser
     ?`<div class="acctcard"><div class="row" style="flex-wrap:nowrap;gap:12px;align-items:center"><span class="avbtn on" aria-hidden="true" style="width:44px;height:44px;font-size:20px;background:${$("#avBtn").style.background||"var(--accent)"}">${esc(Array.from(userName(sbUser)||"?")[0].toUpperCase())}</span><div style="min-width:0"><b>${esc(userName(sbUser)||"ログイン中")}</b>${sbUser.email&&userName(sbUser)!==sbUser.email?`<div class="note" style="margin:0;overflow-wrap:anywhere">${esc(sbUser.email)}</div>`:""}</div></div>
@@ -4683,6 +4704,7 @@ function openPanel(id){
   clearTimeout(drawerTimer);
   [...$("#drawerBody").children].forEach(el=>{if(el.id!==id&&panelHome[el.id]){el.open=false;panelHome[el.id].after(el)}});   // 前に出していたパネルは元の場所へ
   if(!panelHome[id]){const ph=document.createComment(id);d.before(ph);panelHome[id]=ph}
+  if(id==="setBox")renderAcct();   // 開くたびに今のアカウントの状態で作り直す
   clearTimeout(drawerTimer);$("#drawerBody").appendChild(d);d.open=true;qbOpen=id;
   $("#drawerTitle").textContent=DRAWER_TITLE[id]||"";$("#drawerBody").scrollTop=0;
   $("#drawerBg").hidden=false;$("#drawer").hidden=false;void $("#drawer").offsetWidth;
@@ -5947,6 +5969,7 @@ function renderAvatar(){
     b.setAttribute("aria-label",CAN_CLOUD?"設定・ログイン":"設定");b.title=CAN_CLOUD?"設定・ログイン":"設定"}
   b.setAttribute("aria-expanded",String(qbOpen==="setBox"));
 }
+$("#sync").onclick=()=>{if(qbOpen!=="setBox")openPanel("setBox")};
 $("#avBtn").onclick=()=>{openPanel("setBox");try{if(!localStorage.getItem(LS+"-setseen")){localStorage.setItem(LS+"-setseen","1");renderAvatar()}}catch(e){}};
 $("#drawerClose").onclick=closeDrawer;$("#drawerBg").onclick=closeDrawer;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&qbOpen&&!$("#repDlg").open){e.preventDefault();closeDrawer()}},true);   // Esc でも閉じる
@@ -5995,7 +6018,7 @@ samplePromise.then(s=>{if(!s)aiOff=true});
 repCtx().then(r=>{if(r&&r.owner)loadReports()});
 let startTab="cards";try{startTab=localStorage.getItem(LS+"-tab")||"cards"}catch(e){}
 showTab(["cards","words","quiz","listen","diff","talk"].includes(startTab)?startTab:"cards");
-initDb();initCloud();
+renderSync();initDb();initCloud();
 </script>
 
 </body>
