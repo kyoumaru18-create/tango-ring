@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.e174d2d7.js" as="script">
+<link rel="preload" href="words.5420edb6.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -678,7 +678,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.e174d2d7.js"></script>
+<script src="words.5420edb6.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -1481,7 +1481,8 @@ function makeQ(w,words){
   const types=["en2ja","ja2en"];if(e.ex&&wordRe(w).test(e.ex))types.push("cloze","cloze");
   const type=types[Math.floor(Math.random()*types.length)];
   // まちがいの選択肢は、品詞が同じで、レベルが近い（±1）単語から優先して選ぶ
-  const near=x=>!w.lv||!x.lv||Math.abs(x.lv-w.lv)<=1,cand=words.filter(x=>x.id!==w.id);
+  // 意味が同じ語（trainer と sweatshirt の「トレーナー」など）は、どの出し方でも正解が2つになるので選択肢に入れない
+  const near=x=>!w.lv||!x.lv||Math.abs(x.lv-w.lv)<=1,cand=words.filter(x=>x.id!==w.id&&x.ja!==w.ja&&x.w.toLowerCase()!==w.w.toLowerCase());
   const same=shuffle(cand.filter(x=>x.pos===w.pos&&near(x))),other=shuffle(cand.filter(x=>!(x.pos===w.pos&&near(x))));
   const field=type==="en2ja"?"ja":"w";const seen=new Set([w[field]]);const ds=[];
   for(const x of same.concat(other)){if(ds.length>=3)break;if(!seen.has(x[field])){seen.add(x[field]);ds.push(x)}}
@@ -1970,7 +1971,7 @@ $("#dfIn").onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing)lookupDiff($("#dfIn"
 /* ---------- 文法のコツ（使い分けタブの中） ----------
    日本人がつまずきやすい文法を、核のイメージ・形・例文・よくある間違い・確認クイズ3問でまとめる。
    内容はここに書いてあるので AI なしでも使える。ここにない文法は AI に聞ける（キャッシュ：localStorage -gr）。
-   points[].tl は時制の図（past 過去／perfect 現在完了／pastperfect 過去完了／future 未来／habit 習慣／progressive 進行中）
+   points[].tl は時制の図（past 過去／perfect 現在完了／pastperfect 過去完了／future 未来／habit 習慣／progressive 進行中／pastprog 過去進行形）
    テーマが多いので、上で分野を選び、その分野のテーマだけを並べる。分野はいま開いているテーマ（grCur）から決まる。 */
 const GRAMMAR=[
 {id:"place",cat:"前置詞",title:"場所の at / on / in",summary:"at は「点」、on は「くっついている面」、in は「囲まれた中」。",points:[
@@ -2189,6 +2190,108 @@ const GRAMMAR=[
  {label:"1回うまくできた：was able to / managed to",form:"was able to + 動詞 ／ managed to + 動詞",explain:"特定のときに、がんばって・運よくできたこと。",ex:[["I was able to get a ticket.","チケットが取れた。"],["We managed to catch the last train.","なんとか終電に間に合った。"]],ng:"1回のことに could は使いにくい：I could get a ticket yesterday. → I was able to get a ticket yesterday."},
  {label:"できなかった：couldn't",form:"couldn't + 動詞",explain:"否定なら、1回のことでも couldn't でいい。",ex:[["I couldn't sleep last night.","昨夜は眠れなかった。"],["We couldn't find the hotel.","ホテルが見つからなかった。"]],ng:""}],
  quiz:[{q:"My grandfather ___ run very fast when he was young.",opts:["could","was able to"],a:0,why:"若いころいつでもできた能力なので could。"},{q:"The exam was hard, but I ___ pass it.",opts:["could","was able to"],a:1,why:"1回の試験でうまくできたので was able to。"},{q:"I ___ sleep because of the noise.",opts:["couldn't","wasn't able"],a:0,why:"否定は couldn't で自然（wasn't able なら to が要る）。"}]},
+/* ---- 2026-10-18 に追加（20テーマ） ---- */
+{id:"likeas",cat:"前置詞",title:"like と as（〜のように／〜として）",summary:"like は「〜に似ている・〜のように」（本当はそれではない）、as は「〜として」（実際にその立場・役割で）。",points:[
+ {label:"like（〜のように・〜みたいな）",form:"like + 名詞",explain:"似ているけれど、本当にそれではない。",ex:[["He talks like a teacher.","彼は先生みたいな話し方をする（先生ではない）。"],["It looks like rain.","雨が降りそうだ。"]],ng:""},
+ {label:"as（〜として）",form:"as + 名詞（役割・立場）",explain:"実際にその役割・立場で。",ex:[["He works as a teacher.","彼は教師として働いている。"],["I used the box as a table.","箱をテーブル代わりに使った。"]],ng:"× He works like a teacher.（先生ではないのに先生のように働く、という意味になる）"},
+ {label:"as + 文（〜するとおりに）",form:"as + 主語 + 動詞",explain:"「〜するとおりに」「〜のように」。会話では like も使うが、改まった場面では as。",ex:[["Do as I say.","私の言うとおりにして。"],["As you know, the meeting is at three.","ご存じのとおり、会議は3時です。"]],ng:""}],
+ quiz:[{q:"She works ___ a nurse at the city hospital.",opts:["as","like"],a:0,why:"実際に看護師として働いているので as。"},{q:"He swims ___ a fish.",opts:["as","like"],a:1,why:"魚ではないが、魚のように泳ぐので like。"},{q:"This cake tastes ___ chocolate.",opts:["like","as"],a:0,why:"taste like + 名詞で「〜のような味がする」。"}]},
+{id:"almost",cat:"名詞・冠詞",title:"almost / most / most of（ほとんどの）",summary:"almost は「ほぼ・もう少しで」という副詞で、名詞を直接説明できない。「ほとんどの〜」は most か almost all。",points:[
+ {label:"most + 名詞（たいていの〜）",form:"most + 複数名詞・数えられない名詞",explain:"特定しない、一般的な話。",ex:[["Most people have a smartphone.","ほとんどの人がスマホを持っている。"],["Most Japanese food is healthy.","和食はたいてい体にいい。"]],ng:"× Almost people → Most people ／ Almost all people"},
+ {label:"most of the + 名詞（その中のほとんど）",form:"most of + the / my / these + 名詞 ／ most of + us / them",explain:"決まったグループのほとんど。the や my がつくと of が必要。",ex:[["Most of my friends live in Tokyo.","友達のほとんどは東京に住んでいる。"],["Most of us agreed.","私たちのほとんどが賛成した。"]],ng:"× Most my friends → Most of my friends"},
+ {label:"almost（ほぼ・もう少しで）",form:"almost + all / every / always / 数字 ／ almost + 動詞",explain:"all, every, always, 数字などにつける。動詞につけると「もう少しで〜するところだった」。",ex:[["Almost everyone came.","ほぼ全員来た。"],["I almost missed the train.","もう少しで電車に乗り遅れるところだった。"]],ng:""}],
+ quiz:[{q:"___ people in Japan use trains every day.",opts:["Most","Almost","Most of"],a:0,why:"一般の人の話なので Most + 名詞。"},{q:"___ the students passed the exam.",opts:["Most","Almost","Most of"],a:2,why:"the students（決まったグループ）なので Most of。"},{q:"I ___ forgot your birthday!",opts:["most","mostly","almost"],a:2,why:"「もう少しで忘れるところだった」は almost。"}]},
+{id:"myself",cat:"名詞・冠詞",title:"myself など（〜自身）と each other（お互い）",summary:"主語と目的語が同じ人なら myself / yourself などを使う。「お互いに」は each other。",points:[
+ {label:"自分に向けた動作",form:"動詞 + myself / yourself / himself / herself / ourselves / themselves",explain:"自分で自分に何かをするとき、目的語を省かない。",ex:[["I cut myself while cooking.","料理中に手を切ってしまった。"],["Please help yourself.","ご自由にどうぞ（召し上がってください）。"]],ng:"× I enjoyed. → I enjoyed myself. ／ I enjoyed it."},
+ {label:"「自分で」「一人で」",form:"文 + myself ／ by myself",explain:"myself で「人に頼らず自分で」と強める。by myself は「一人で」。",ex:[["I made this cake myself.","このケーキは自分で作った。"],["I live by myself.","一人暮らしだ。"]],ng:""},
+ {label:"each other（お互いに）",form:"動詞 + each other",explain:"二人以上が、相手に同じことをする。",ex:[["We help each other.","私たちは助け合っている。"],["They looked at each other.","二人は顔を見合わせた。"]],ng:"themselves は「それぞれ自分を」、each other は「相手を」。They blamed themselves.（自分を責めた）／ They blamed each other.（お互いを責めた）"}],
+ quiz:[{q:"Did you enjoy ___ at the party?",opts:["you","yourself","your"],a:1,why:"主語の you と同じ人なので yourself。"},{q:"I live ___ myself.",opts:["by","with","for"],a:0,why:"「一人で」は by myself。"},{q:"My sister and I call ___ every day.",opts:["ourselves","us","each other"],a:2,why:"姉が私に、私が姉に電話する（お互いに）ので each other。"}]},
+{id:"ratio",cat:"形容詞・副詞",title:"倍数と「〜すればするほど」（twice as 〜 as / the 比較級）",summary:"「〜の2倍…」は twice as 〜 as、「〜すればするほど…」は the + 比較級, the + 比較級。",points:[
+ {label:"倍数（〜の2倍・3倍）",form:"twice / three times / half + as 〜 as",explain:"as 〜 as の前に倍数を置く。2倍は twice、3倍からは 〜 times、半分は half。",ex:[["This room is twice as big as mine.","この部屋は私の部屋の2倍の広さだ。"],["The new train is three times as fast as the old one.","新しい電車は古い電車の3倍速い。"]],ng:"2倍は two times より twice がふつう。"},
+ {label:"the 比較級, the 比較級（〜すればするほど）",form:"The + 比較級 + 主語 + 動詞, the + 比較級 + 主語 + 動詞",explain:"片方が変わると、もう片方も変わる。",ex:[["The more you practice, the better you get.","練習すればするほど上手になる。"],["The sooner, the better.","早ければ早いほどいい。"]],ng:"the を忘れない：× More you practice, better you get."},
+ {label:"比較級 and 比較級（どんどん〜）",form:"比較級 + and + 比較級 ／ more and more + 長い語",explain:"変化が続いていることを言う。",ex:[["It's getting colder and colder.","どんどん寒くなっている。"],["English is becoming more and more important.","英語はますます大事になっている。"]],ng:""}],
+ quiz:[{q:"His bag is ___ as heavy as mine.",opts:["twice","two","double"],a:0,why:"「2倍」は twice as 〜 as。"},{q:"The more you eat, ___ you get.",opts:["fatter","the fatter","the more fat"],a:1,why:"後ろにも the + 比較級（fatter）。"},{q:"Prices are getting ___.",opts:["high and higher","more and more high","higher and higher"],a:2,why:"短い語は -er and -er。"}]},
+{id:"exclaim",cat:"形容詞・副詞",title:"What a 〜! / How 〜!（感動を伝える）",summary:"驚きや感動は What a + 形容詞 + 名詞! か How + 形容詞!。会話では That's so 〜! もよく使う。",points:[
+ {label:"What a 〜!（名詞があるとき）",form:"What + a / an + 形容詞 + 名詞!",explain:"名詞があるときは What。数えられない名詞や複数なら a はつけない：What nice weather!",ex:[["What a beautiful view!","なんてきれいな景色！"],["What a surprise!","びっくりした！"]],ng:"× What a nice weather! → What nice weather!（weather は数えられない）"},
+ {label:"How 〜!（名詞がないとき）",form:"How + 形容詞・副詞!",explain:"名詞がないときは How。少し改まった、大げさな響きになることもある。",ex:[["How kind of you!","なんてご親切に！"],["How cute!","かわいい！"]],ng:""},
+ {label:"会話でよく使う言い方",form:"That's + 形容詞! ／ So + 形容詞! ／ It's so + 形容詞!",explain:"日常会話では That's 〜! や so がいちばん自然。",ex:[["That's amazing!","すごい！"],["It's so good!","すごくおいしい！"]],ng:""}],
+ quiz:[{q:"___ a lovely day!",opts:["What","How","So"],a:0,why:"a lovely day（名詞）があるので What。"},{q:"___ nice of you to help me!",opts:["What","How"],a:1,why:"nice（形容詞）だけなので How。"},{q:"___ delicious food!",opts:["How","What a","What"],a:2,why:"food は数えられないので a をつけず What。"}]},
+{id:"wantto",cat:"動詞の形",title:"want 人 to 〜（人に〜してほしい）",summary:"「人に〜してほしい・頼む・言う」は、動詞 + 人 + to + 動詞。that 〜 の文にしない。",points:[
+ {label:"want / would like + 人 + to",form:"want / would like + 人 + to + 動詞",explain:"「人に〜してほしい」。would like のほうが丁寧。",ex:[["I want you to come with me.","あなたに一緒に来てほしい。"],["I'd like you to meet my wife.","妻を紹介させてください。"]],ng:"× I want that you come. → I want you to come."},
+ {label:"ask / tell / remind + 人 + to",form:"ask / tell / remind / allow + 人 + to + 動詞",explain:"頼む・言う・思い出させる・許す、も同じ形。",ex:[["She asked me to call her back.","彼女に折り返し電話してと頼まれた。"],["Remind me to buy milk.","牛乳を買うのを忘れてたら言ってね。"]],ng:""},
+ {label:"「〜しないように」",form:"人 + not to + 動詞",explain:"not は to の前に置くのがふつう。",ex:[["He told me not to worry.","心配しないでと彼に言われた。"],["I asked them not to be late.","遅れないように頼んだ。"]],ng:""}],
+ quiz:[{q:"I want ___ help me.",opts:["you to","that you","you"],a:0,why:"want + 人 + to + 動詞。"},{q:"My doctor told me ___ smoking.",opts:["stop","to stop","stopping"],a:1,why:"tell + 人 + to + 動詞。"},{q:"She asked me ___ tell anyone.",opts:["not to","don't","no to"],a:0,why:"「〜しないように」は not to。"}]},
+{id:"perception",cat:"動詞の形",title:"see / hear + 人 + 動詞（〜するのを見る・聞く）",summary:"見る・聞く・感じる動詞は、「人 + 動詞の原形」なら最初から最後まで、「人 + -ing」なら途中の一場面を見聞きしたことを表す。",points:[
+ {label:"原形（全部見た・聞いた）",form:"see / hear / watch + 人 + 動詞の原形",explain:"動作のはじめから終わりまで。to はつけない。",ex:[["I saw him leave the office.","彼が会社を出ていくのを見た。"],["I heard someone call my name.","誰かが私の名前を呼ぶのが聞こえた。"]],ng:"× I saw him to leave. → I saw him leave."},
+ {label:"-ing（途中の場面）",form:"see / hear + 人 + -ing",explain:"動作が続いている途中の一場面。",ex:[["I saw her crossing the street.","彼女が道を渡っているところを見た。"],["I can hear the kids playing outside.","子どもたちが外で遊んでいるのが聞こえる。"]],ng:""},
+ {label:"feel / notice / smell",form:"feel / notice + 人・物 + 動詞・-ing ／ smell + 物 + -ing",explain:"感じる・気づく・においがする、も同じ形。",ex:[["I felt the building shake.","建物が揺れるのを感じた。"],["I smell something burning.","何かこげているにおいがする。"]],ng:""}],
+ quiz:[{q:"I heard the phone ___, but I didn't answer it.",opts:["ring","to ring","rang"],a:0,why:"hear + 物 + 原形。to はつけない。"},{q:"I saw a man ___ in front of the station. He was still there when I left.",opts:["stood","standing","to stand"],a:1,why:"立っている途中の場面なので -ing。"},{q:"I felt something ___ my leg.",opts:["to touch","touched","touch"],a:2,why:"feel + 物 + 原形。"}]},
+{id:"takecost",cat:"動詞の形",title:"It takes / It costs（時間・お金がかかる）",summary:"時間は It takes、お金は It costs。「人」を入れるときは It takes + 人 + 時間 + to 〜。",points:[
+ {label:"時間がかかる：It takes",form:"It takes + (人) + 時間 + to + 動詞",explain:"主語は It。「人」は takes のすぐ後ろに置く。",ex:[["It takes 30 minutes to get to the station.","駅まで30分かかる。"],["It took me two hours to finish.","終わらせるのに2時間かかった。"]],ng:"× It needs 30 minutes. → It takes 30 minutes."},
+ {label:"お金がかかる：It costs",form:"It costs + (人) + 金額 + to + 動詞 ／ 物 + costs + 金額",explain:"cost の過去形も cost。",ex:[["It costs 3,000 yen to get in.","入場に3,000円かかる。"],["This bag cost me 20,000 yen.","このかばんは2万円した。"]],ng:"× It costed → It cost"},
+ {label:"たずね方",form:"How long does it take to 〜? ／ How much does it cost to 〜?",explain:"旅行や買い物でとてもよく使う。",ex:[["How long does it take to get there?","そこまでどのくらいかかりますか？"],["How much does it cost to send this?","これを送るのにいくらかかりますか？"]],ng:""}],
+ quiz:[{q:"It ___ me an hour to cook dinner.",opts:["took","spent","cost"],a:0,why:"時間がかかったので took。"},{q:"How much does it ___ to rent a car?",opts:["take","cost","pay"],a:1,why:"お金がかかるのは cost。"},{q:"The tickets ___ 5,000 yen last year.",opts:["costed","took","cost"],a:2,why:"cost の過去形は cost。"}]},
+{id:"phrasal",cat:"動詞の形",title:"句動詞の考え方（up / out / off / on）",summary:"give up, find out のような「動詞＋小さな語」は、後ろの語のイメージで意味がつかめる。up は「完全に」、out は「外へ・すっかり」、off は「離れる・止める」、on は「くっつく・続ける」。",points:[
+ {label:"up（上まで・完全に）",form:"clean up / eat up / fill up / give up / set up",explain:"上まで、最後までやりきるイメージ。",ex:[["Clean up your room.","部屋を片づけて。"],["Don't give up.","あきらめないで。"]],ng:""},
+ {label:"out（外へ・すっかり・はっきり）",form:"find out / run out / sell out / figure out",explain:"中から外へ出る、すっかりなくなる、はっきりする。",ex:[["I found out the truth.","真実を知った。"],["We ran out of coffee.","コーヒーが切れた。"]],ng:""},
+ {label:"off（離れる・止める）",form:"turn off / take off / put off / call off / get off",explain:"くっついていたものが離れる、動いていたものが止まる。",ex:[["Turn off the lights.","電気を消して。"],["The game was called off.","試合は中止になった。"]],ng:""},
+ {label:"on（くっつく・続ける）",form:"turn on / put on / try on / go on / keep on",explain:"体や物にくっつく、または続けるイメージ。",ex:[["Can I try this on?","これ試着してもいいですか？"],["Please go on.","どうぞ続けて。"]],ng:""}],
+ quiz:[{q:"The concert tickets sold ___ in five minutes.",opts:["up","out","off"],a:1,why:"すっかりなくなったので out。"},{q:"It's cold. Put ___ your jacket.",opts:["on","off","out"],a:0,why:"体にくっつける（着る）ので on。"},{q:"The meeting was put ___ until next week.",opts:["on","up","off"],a:2,why:"put off で「延期する」。"}]},
+{id:"prepping",cat:"動詞の形",title:"前置詞のあとは -ing（before leaving）",summary:"before, after, without, about, for などの前置詞のあとに動詞を続けるときは、-ing にする。",points:[
+ {label:"前置詞 + -ing",form:"before / after / without / by / instead of + -ing",explain:"前置詞のあとには名詞の形が来る。動詞なら -ing。",ex:[["Wash your hands before eating.","食べる前に手を洗って。"],["He left without saying goodbye.","彼はさよならも言わずに帰った。"]],ng:"× before eat → before eating"},
+ {label:"決まった言い方 + -ing",form:"be good at / be interested in / be afraid of / think about + -ing",explain:"気持ち・得意・考えを表す言い方も、前置詞のあとは -ing。",ex:[["I'm good at cooking.","料理が得意だ。"],["I'm thinking about changing jobs.","転職を考えている。"]],ng:"× I'm interested in learn English. → I'm interested in learning English."},
+ {label:"to が前置詞のとき",form:"look forward to / be used to / get used to + -ing",explain:"この to は「〜へ」という前置詞なので、後ろは -ing。",ex:[["I'm looking forward to seeing you.","会えるのを楽しみにしている。"],["I'm used to working at night.","夜働くのに慣れている。"]],ng:""}],
+ quiz:[{q:"Thank you for ___ me.",opts:["help","helping","to help"],a:1,why:"for は前置詞なので -ing。"},{q:"Call me before ___ home.",opts:["leaving","leave","to leave"],a:0,why:"before のあとは -ing。"},{q:"She's afraid ___ alone at night.",opts:["of walk","to walk of","of walking"],a:2,why:"be afraid of + -ing。"}]},
+{id:"maymight",cat:"助動詞・仮定法",title:"may / might / could（〜かもしれない）",summary:"「〜かもしれない」は may / might / could。確信の強さは must（きっと）＞ will（〜だろう）＞ probably（たぶん）＞ may / might（かもしれない）。",points:[
+ {label:"may / might",form:"may / might + 動詞",explain:"どちらも「〜かもしれない」。might のほうが少し自信がなく、会話でよく使う。",ex:[["It might rain later.","あとで雨が降るかもしれない。"],["She may be at home.","彼女は家にいるかもしれない。"]],ng:""},
+ {label:"could（〜の可能性もある）",form:"could + 動詞",explain:"「ありえる」という可能性を言う。",ex:[["It could be true.","本当かもしれない。"],["That could be a problem.","それは問題になるかもしれない。"]],ng:"否定に注意：couldn't / can't は「〜のはずがない」。It can't be true.（本当のはずがない）"},
+ {label:"確信の強さ",form:"must（きっと）＞ will（〜だろう）＞ probably（たぶん）＞ may / might（かもしれない）",explain:"どのくらい確かかで言い方を選ぶ。",ex:[["He must be tired.","彼はきっと疲れている。"],["He's probably tired.","彼はたぶん疲れている。"]],ng:""}],
+ quiz:[{q:"Take an umbrella. It ___ rain this afternoon.",opts:["might","must","should"],a:0,why:"降るかどうかわからないので might。"},{q:"「そんなはずがない」は？",opts:["It may not be true.","It can't be true.","It might be true."],a:1,why:"「〜のはずがない」は can't。may not は「〜ではないかもしれない」。"},{q:"I'm not sure, but she ___ be at the gym.",opts:["must","can't","may"],a:2,why:"確信がないので may。"}]},
+{id:"suggest",cat:"助動詞・仮定法",title:"誘う・提案する（Let's / Shall we / Why don't we / How about）",summary:"「〜しよう」は Let's、「〜しましょうか」は Shall we、「〜しない？」は Why don't we、「〜はどう？」は How about。",points:[
+ {label:"Let's / Shall we",form:"Let's + 動詞 ／ Shall we + 動詞?",explain:"Let's は一緒にやろうと決める。Shall we は相手の気持ちを聞く丁寧な言い方（アメリカ英語では少し堅い）。",ex:[["Let's take a break.","休憩しよう。"],["Shall we go?","行きましょうか。"]],ng:""},
+ {label:"Why don't we / you",form:"Why don't we + 動詞? ／ Why don't you + 動詞?",explain:"「なぜ〜しないの」ではなく、誘い・提案。",ex:[["Why don't we eat out tonight?","今夜は外で食べない？"],["Why don't you ask him?","彼に聞いてみたら？"]],ng:"Why didn't you 〜? は「なぜ〜しなかったの？」と責める意味になる。"},
+ {label:"How about / What about",form:"How about + -ing / 名詞?",explain:"案を出すとき。",ex:[["How about Friday?","金曜日はどう？"],["How about going for a walk?","散歩に行くのはどう？"]],ng:"× How about go → How about going"}],
+ quiz:[{q:"It's late. ___ go home.",opts:["Let's","Shall","Why don't"],a:0,why:"「帰ろう」は Let's + 動詞。"},{q:"___ we meet at the station?",opts:["Let's","Shall","How about"],a:1,why:"「〜しましょうか」は Shall we。"},{q:"How about ___ sushi tonight?",opts:["having","have","to have"],a:0,why:"How about のあとは -ing。"}]},
+{id:"pastprog",cat:"時制",title:"過去形と過去進行形（was -ing when 〜）",summary:"過去進行形（was / were + -ing）は、過去のある時点で「〜している途中だった」ことを表す。その途中に起きた出来事は過去形。",points:[
+ {label:"過去進行形（〜している途中だった）",form:"was / were + -ing",explain:"その時点で、動作の途中だった。",ex:[["I was watching TV at nine last night.","昨夜9時にはテレビを見ていた。"],["What were you doing?","何をしていたの？"]],ng:"",tl:"pastprog"},
+ {label:"途中に起きた出来事",form:"was -ing when + 過去形 ／ 過去形 while + was -ing",explain:"長く続いていたこと（進行形）の途中に、短い出来事（過去形）が起きる。",ex:[["I was taking a shower when the phone rang.","シャワーを浴びていたら電話が鳴った。"],["Someone called while I was out.","出かけている間に誰かから電話があった。"]],ng:""},
+ {label:"過去形との違い",form:"過去形：〜した ／ 過去進行形：〜していた（途中）",explain:"どの場面を切り取るかで形が変わる。",ex:[["I read a book last night.","昨夜本を読んだ。"],["I was reading a book when you called.","あなたが電話してきたとき、本を読んでいた。"]],ng:"× When the phone rang, I took a shower.（電話が鳴ってからシャワーを浴びた、という意味になる）"}],
+ quiz:[{q:"I ___ dinner when you called.",opts:["cooked","was cooking","am cooking"],a:1,why:"電話が来たとき、料理の途中だった。"},{q:"What ___ at 10 p.m. yesterday?",opts:["were you doing","did you do","are you doing"],a:0,why:"その時点で何をしている途中だったかを聞くので過去進行形。"},{q:"While I was walking home, it ___ to rain.",opts:["was starting","starts","started"],a:2,why:"歩いている途中に起きた出来事なので過去形。"}]},
+{id:"perfprog",cat:"時制",title:"現在完了進行形（have been -ing）",summary:"have been -ing は「（過去から今まで）ずっと〜し続けている」。動作が続いていることや、今見えている様子の原因を言う。",points:[
+ {label:"ずっと〜している",form:"have / has been + -ing + for / since",explain:"動作の動詞（study, wait, work）が、今まで続いている。",ex:[["I've been studying English for three years.","3年間ずっと英語を勉強している。"],["It's been raining since this morning.","朝からずっと雨が降っている。"]],ng:"",tl:"perfect"},
+ {label:"さっきまでしていた（様子からわかる）",form:"have been + -ing（for や since なし）",explain:"今の様子から、直前まで続いていたことを言う。",ex:[["You look tired. Have you been working late?","疲れてるね。遅くまで働いてたの？"],["Sorry, I've been running.","ごめん、走ってきたんだ（だから息が切れている）。"]],ng:""},
+ {label:"現在完了との違い",form:"have been -ing：続けている ／ have + 過去分詞：終わった・回数",explain:"続いている途中か、終わった結果か。",ex:[["I've been reading this book.","この本を読んでいる（まだ途中）。"],["I've read this book twice.","この本は2回読んだ。"]],ng:"状態の動詞（know, like, have）は進行形にしない：× I've been knowing him → I've known him."}],
+ quiz:[{q:"I ___ for you for an hour!",opts:["have waited","have been waiting","am waiting"],a:1,why:"1時間前から今まで待ち続けている。"},{q:"She ___ three books this month.",opts:["has written","has been writing","writes"],a:0,why:"3冊という終わった数を言うので現在完了。"},{q:"How long ___ here?",opts:["are you living","have you been living","do you live"],a:1,why:"今まで続いている期間をたずねるので have been -ing。"}]},
+{id:"subjq",cat:"疑問・否定",title:"主語をたずねる疑問文（Who called? に did はいらない）",summary:"「誰が」「何が」と主語をたずねるときは、Who / What をそのまま主語にして、do / did を使わない。",points:[
+ {label:"「誰が・何が」をたずねる",form:"Who / What + 動詞 〜?",explain:"ふつうの文の主語を Who / What に変えるだけ。語順はそのまま。",ex:[["Who called?","誰が電話してきたの？"],["What happened?","何があったの？"]],ng:"× Who did call? → Who called?"},
+ {label:"「誰を・何を」をたずねる",form:"Who / What + do / did + 主語 + 動詞?",explain:"目的語をたずねるときは do / did を使う。",ex:[["Who did you call?","誰に電話したの？"],["What did you buy?","何を買ったの？"]],ng:""},
+ {label:"Which / How many も同じ",form:"Which + 名詞 + 動詞? ／ How many + 名詞 + 動詞?",explain:"主語をたずねるなら do / did はいらない。",ex:[["Which team won?","どっちのチームが勝った？"],["How many people came?","何人来た？"]],ng:""}],
+ quiz:[{q:"___ broke the window?",opts:["Who did","Who","Whom"],a:1,why:"「誰が」割ったのかなので Who + 動詞。"},{q:"What ___ last night? You look tired.",opts:["happened","did happen","happens"],a:0,why:"「何が」起きたのかなので What happened。"},{q:"Who ___ at the party?",opts:["you met","met you","did you meet"],a:2,why:"「誰に」会ったのか（目的語）なので did が必要。"}]},
+{id:"metoo",cat:"疑問・否定",title:"「私も」の言い方（Me too / Me neither / So do I）",summary:"肯定の文に「私も」は Me too / So do I、否定の文に「私も（〜ない）」は Me neither / Neither do I。",points:[
+ {label:"肯定の文に「私も」",form:"Me too. ／ So + do / am / can + I.",explain:"So の後ろの動詞は、相手の文に合わせる（be動詞なら am、一般動詞なら do）。",ex:[["I love sushi. — Me too.","お寿司大好き。— 私も。"],["I'm tired. — So am I.","疲れた。— 私も。"]],ng:""},
+ {label:"否定の文に「私も」",form:"Me neither. ／ Neither + do / am / can + I.",explain:"相手が「〜ない」と言ったときは neither。",ex:[["I don't like horror movies. — Me neither.","ホラー映画は好きじゃない。— 私も。"],["I can't swim. — Neither can I.","泳げない。— 私も。"]],ng:"× I don't like it. — Me too. → Me neither."},
+ {label:"「私は違う」",form:"I do. ／ I don't. ／ I'm not.",explain:"相手と違うときは、主語と動詞だけで返す。",ex:[["I don't drink coffee. — Oh, I do.","コーヒーは飲まない。— あ、私は飲むよ。"],["I'm hungry. — I'm not.","おなかすいた。— 私はすいてない。"]],ng:""}],
+ quiz:[{q:"I've never been to Okinawa. — ___",opts:["Me too.","Me neither.","So have I."],a:1,why:"否定の文への「私も」は Me neither。"},{q:"I'm so sleepy. — So ___ I.",opts:["am","do","have"],a:0,why:"I'm（be動詞）なので So am I。"},{q:"I like cats. — So ___ I.",opts:["am","do","can"],a:1,why:"like（一般動詞）なので So do I。"}]},
+{id:"whatrel",cat:"文をつなぐ",title:"what（〜すること・〜するもの）",summary:"what は「〜するもの・こと」という意味で、名詞のかたまりを作る。the thing(s) that 〜 と同じ。",points:[
+ {label:"what ＝ 〜するもの・こと",form:"what + 主語 + 動詞",explain:"what 自体に「もの・こと」が入っているので、前に名詞を置かない。",ex:[["This is what I wanted.","これが欲しかったものだ。"],["I don't understand what he said.","彼の言ったことがわからない。"]],ng:"× the thing what → the thing that ／ what"},
+ {label:"主語にもなる",form:"What + (主語) + 動詞 + is / was 〜",explain:"言いたいことを最後に回して強調できる。",ex:[["What I need is a vacation.","私に必要なのは休暇だ。"],["What surprised me was the price.","驚いたのは値段だった。"]],ng:""},
+ {label:"what と that の違い",form:"名詞 + that 〜 ／ what 〜（名詞なし）",explain:"前に名詞があれば that（which）、なければ what。",ex:[["The book that I bought is great.","私が買った本はすばらしい。"],["What I bought is great.","私が買ったものはすばらしい。"]],ng:""}],
+ quiz:[{q:"Tell me ___ you want for your birthday.",opts:["what","that","which"],a:0,why:"前に名詞がなく「欲しいもの」なので what。"},{q:"This isn't the bag ___ I ordered.",opts:["what","who","that"],a:2,why:"前に the bag（名詞）があるので that。"},{q:"___ I like about this city is the food.",opts:["That","What","Which"],a:1,why:"「この街の好きなところ」は What I like about 〜。"}]},
+{id:"unless",cat:"文をつなぐ",title:"unless / in case / as long as（条件のいろいろ）",summary:"unless は「〜しない限り」、in case は「〜するといけないから（念のため）」、as long as は「〜しさえすれば」。",points:[
+ {label:"unless（〜しない限り）",form:"unless + 主語 + 動詞（現在形）",explain:"if 〜 not とほぼ同じ意味。",ex:[["I'll go unless it rains.","雨が降らない限り行く。"],["Don't call me unless it's urgent.","急ぎでない限り電話しないで。"]],ng:"unless の中に not を入れない：× unless it doesn't rain"},
+ {label:"in case（念のため）",form:"in case + 主語 + 動詞 ／ just in case",explain:"「もし〜なら」ではなく「〜に備えて、今」。",ex:[["Take an umbrella in case it rains.","雨が降るといけないから傘を持っていって。"],["I'll bring some snacks, just in case.","念のためお菓子を持っていくね。"]],ng:"if とはちがう：Take an umbrella if it rains.（雨が降ったら傘を持っていって）"},
+ {label:"as long as（〜さえすれば）",form:"as long as + 主語 + 動詞",explain:"条件をつけて許すとき。",ex:[["You can borrow it as long as you return it.","返してくれるなら借りていいよ。"],["Any day is fine as long as it's not Monday.","月曜でなければいつでもいい。"]],ng:""}],
+ quiz:[{q:"You'll miss the bus ___ you hurry.",opts:["if","unless","in case"],a:1,why:"「急がない限り」乗り遅れるので unless。"},{q:"Write down my number ___ you need it.",opts:["in case","unless","as long as"],a:0,why:"必要になるときに備えて（念のため）なので in case。"},{q:"You can stay ___ you're quiet.",opts:["unless","in case","as long as"],a:2,why:"「静かにしていさえすれば」なので as long as。"}]},
+{id:"evenif",cat:"文をつなぐ",title:"even if と even though（たとえ〜でも／〜なのに）",summary:"even if は「たとえ〜だとしても」（そうなるかわからない仮の話）、even though は「実際に〜なのに」。",points:[
+ {label:"even if（仮に〜でも）",form:"even if + 主語 + 動詞",explain:"本当にそうなるかはわからない、仮の話。",ex:[["Even if it rains, we'll go.","たとえ雨でも行く。"],["I'll finish it even if it takes all night.","一晩かかっても終わらせる。"]],ng:""},
+ {label:"even though（実際に〜なのに）",form:"even though + 主語 + 動詞",explain:"本当にあったことについて「それなのに」。although より強い。",ex:[["Even though it was raining, we went out.","雨が降っていたのに出かけた。"],["She came to work even though she was sick.","具合が悪かったのに彼女は出勤した。"]],ng:""},
+ {label:"even（〜でさえ）",form:"even + 名詞・動詞",explain:"even だけで「〜でさえ・〜すら」。",ex:[["Even my mom uses Instagram.","母でさえインスタを使っている。"],["I didn't even know his name.","彼の名前すら知らなかった。"]],ng:"even だけでは文と文をつなげない：× Even I was tired, I went. → Even though I was tired, I went."}],
+ quiz:[{q:"___ I studied hard, I failed the test.",opts:["Even though","Even if","Even"],a:0,why:"実際に勉強したのに落ちたので even though。"},{q:"___ I win the lottery, I won't quit my job.",opts:["Even though","Even if","Even"],a:1,why:"宝くじに当たるかはわからない仮の話なので even if。"},{q:"He didn't ___ say thank you.",opts:["even","even if","even though"],a:0,why:"「お礼すら言わなかった」は even。"}]},
+{id:"nounto",cat:"文をつなぐ",title:"名詞 + to 動詞（something to drink）",summary:"名詞のあとに to + 動詞をつけると、「〜するための」「〜すべき」という説明になる。",points:[
+ {label:"something / nothing + to 〜",form:"something / anything / nothing + to + 動詞",explain:"「飲むための何か」→「飲み物」。",ex:[["Would you like something to drink?","何か飲み物はいかがですか？"],["I have nothing to do today.","今日はやることが何もない。"]],ng:""},
+ {label:"名詞 + to 〜",form:"time / place / way / chance + to + 動詞",explain:"どんな時間・場所・方法かを、後ろから説明する。",ex:[["It's time to go.","もう行く時間だ。"],["I need a place to stay.","泊まる場所が必要だ。"]],ng:""},
+ {label:"前置詞が残る形",form:"名詞 + to + 動詞 + 前置詞",explain:"talk to someone、write with a pen の前置詞がそのまま残る。",ex:[["I need someone to talk to.","話し相手がほしい。"],["Do you have a pen to write with?","書くペンを持ってる？"]],ng:"× a chair to sit → a chair to sit on"}],
+ quiz:[{q:"I'm hungry. Is there anything ___?",opts:["to eat","eat","eating"],a:0,why:"「食べるための何か」なので to eat。"},{q:"I have a lot of work ___ today.",opts:["doing","to do","do"],a:1,why:"「やるべき仕事」は work to do。"},{q:"She needs a friend ___.",opts:["to talk","talking","to talk to"],a:2,why:"talk to a friend の to が残る。"}]},
 ];
 /* 文法のコツの「くわしい説明」（2026-10-11）。GRAMMAR の id ごとに：
    deep：もう少しくわしく（なぜそうなるか）／miss：間違えやすい使い方 [まちがい, 正しい形, 理由]
@@ -2362,6 +2465,86 @@ couldable:{deep:["could は「やろうと思えばできる力があった」�
  miss:[["× I could pass the exam yesterday.","○ I was able to pass the exam yesterday.","1回うまくいったことは was able to。"],["× I wasn't able sleep.","○ I wasn't able to sleep. ／ I couldn't sleep.","be able のあとは to＋動詞。"],["× I can't sleep last night.","○ I couldn't sleep last night.","過去なので couldn't。"]],
  nuance:[["I was able to finish it.","終わらせることができた（ふつう）","I managed to finish it.","なんとか終わらせた（苦労した感じ）","managed to は「大変だったけど」という気持ちが入る。"],["I could hear the music.","音楽が聞こえた（聞こえる状態だった）","I heard the music.","音楽を聞いた","could hear は「聞こえる状態だった」。"]],
  use:[["I managed to get there on time.","なんとか間に合った。",""],["I couldn't help laughing.","笑わずにいられなかった。","couldn't help -ing は「〜せずにいられなかった」。"],["Were you able to find it?","見つかった？","探し物を気にかけるときに。"],["I could see the ocean from my room.","部屋から海が見えた。","旅行の感想に。"]]},
+likeas:{deep:["like は「似ている」なので、比べている2つは別のもの。as は「イコール」で、実際にその役割になっている。He spoke like a doctor.（医者みたいに話した＝医者ではない）／ He spoke as a doctor.（医者の立場で話した＝医者だ）","look like / sound like / feel like / taste like は「〜のように見える・聞こえる・感じる・味がする」。後ろは名詞。形容詞なら like はいらない：You look tired.（× You look like tired）"],
+ miss:[["× You look like tired.","○ You look tired.","形容詞の前に like はいらない。名詞なら like：You look like a model."],["× I work like an engineer.","○ I work as an engineer.","実際の職業は as。"],["× She is such as a kind person.","○ She is such a kind person.","such as は「例えば〜のような」。「とても〜な」は such a。"]],
+ nuance:[["Don't treat me like a child.","子どもみたいに扱わないで（本当は大人）","Treat me as an adult.","大人として扱って（本当に大人）","like は「似ているだけ」、as は「その立場で」。"],["It feels like home.","家にいるみたいに落ち着く","It feels like I'm dreaming.","夢を見ているみたい","feel like のあとは名詞でも文でもいい（会話）。"]],
+ use:[["It looks like rain.","雨が降りそう。",""],["That sounds like fun!","楽しそう！","誘われたときの返事に。"],["I feel like having ramen.","ラーメンが食べたい気分。","feel like + -ing で「〜したい気分」。"],["As I said before, it's up to you.","前にも言ったけど、あなた次第だよ。",""]]},
+almost:{deep:["almost は「あと少しで〜」という意味の副詞。だから「ほとんど全部の」は almost all、「ほぼ毎日」は almost every day と、all や every につけて使う。","most は「一番多い部分」。Most people（たいていの人）は世の中一般の話、Most of the people（その人たちのほとんど）は決まったグループの話。"],
+ miss:[["× Almost Japanese like rice.","○ Most Japanese people like rice. ／ Almost all Japanese people like rice.","almost は名詞の前に直接置けない。"],["× Most of people use smartphones.","○ Most people use smartphones.","一般の話なら of はいらない。"],["× Most my coworkers are young.","○ Most of my coworkers are young.","my や the がつくなら most of。"],["× I mostly missed the bus.","○ I almost missed the bus.","「危うく〜するところだった」は almost。mostly は「主に」。"]],
+ nuance:[["I almost fell.","転びそうになった（転んでいない）","I nearly fell.","転びそうになった","almost と nearly はほぼ同じ。"],["I mostly eat at home.","たいてい家で食べる","I almost always eat at home.","ほぼ必ず家で食べる","mostly は「主に」、almost always は「ほぼいつも」。"]],
+ use:[["Almost done!","もうすぐ終わる！",""],["We're almost there.","もうすぐ着くよ。",""],["Most of the time, I work from home.","たいてい在宅で仕事をしている。",""],["I almost forgot!","忘れるところだった！",""]]},
+myself:{deep:["英語は「誰が、誰に」をはっきり言う言語なので、自分に向けた動作でも目的語を省かない。日本語の「楽しんだ」「けがをした」は、英語では enjoy myself、hurt myself のように「自分を」をつける。","by myself は「一人で」、for myself は「自分のために・自分で（判断する）」。I did it myself.（自分でやった）のように、文の最後の myself は「自分で」を強める。"],
+ miss:[["× Let me introduce me.","○ Let me introduce myself.","主語と同じ人なら myself。"],["× I hurt.（けがをした、のつもりで）","○ I hurt myself.","hurt は「〜を傷つける」なので目的語が必要。"],["× Please help you.","○ Please help yourself.","「ご自由に」は help yourself。"],["× We talked each other.","○ We talked to each other.","talk to の to は残す。"]],
+ nuance:[["I did it by myself.","一人でやった（誰の助けもなく）","I did it myself.","自分でやった（人任せにせず）","by myself は「一人で」、myself は「自分で」を強める。"],["They blamed each other.","お互いを責めた","They blamed themselves.","それぞれ自分を責めた","each other は相手に、themselves は自分に。"]],
+ use:[["Help yourself!","ご自由にどうぞ！","食べ物や飲み物をすすめるときに。"],["Make yourself at home.","くつろいでね。","家に来たお客さんに。"],["Take care of yourself.","体に気をつけてね。","別れ際やメールの最後に。"],["We've known each other for years.","何年も前からの知り合いだ。",""]]},
+ratio:{deep:["倍数は「as 〜 as（同じくらい）」に「何倍」をかけるイメージ。twice as big as は「同じ大きさの2倍」。","the 比較級, the 比較級 は、決まり文句でよく使う：The more, the merrier.（人数が多いほど楽しい）"],
+ miss:[["× twice as bigger as","○ twice as big as","as と as の間は -er にしない。"],["× The more you study, you'll get better.","○ The more you study, the better you'll get.","後ろにも the + 比較級。"],["× more and more cold","○ colder and colder","短い語は -er and -er。"]],
+ nuance:[["It's twice as expensive.","2倍高い","It's twice the price.","値段が倍だ","twice the + 名詞 でも「〜の2倍」を言える。"],["I'm getting better and better.","どんどん上達している","I'm getting better.","上達している","and でつなぐと「どんどん」と変化が強まる。"]],
+ use:[["The more, the merrier.","人が多いほど楽しいよ（ぜひ来て）。","誘うときの決まり文句。"],["The sooner, the better.","早いほどいい。",""],["It took twice as long as I expected.","思っていた2倍かかった。",""],["It's getting better and better.","どんどんよくなっている。",""]]},
+exclaim:{deep:["感嘆文は、もとの文の「どのくらい」の部分を前に出した形。It is a beautiful view. → What a beautiful view (it is)! 後ろの it is は、会話ではふつう省く。","How 〜! は少し改まった、大げさな響きになることがある。友達との会話なら That's so cool! や So cute! のほうが自然。"],
+ miss:[["× How a beautiful day!","○ What a beautiful day!","名詞があるなら What。"],["× What beautiful!","○ How beautiful!","名詞がないなら How。"],["× What a good news!","○ What good news!","news は数えられないので a をつけない。"]],
+ nuance:[["What a shame!","残念！（気の毒に）","What a pity!","残念だね","どちらも同じ意味。shame はここでは「恥」ではない。"],["How nice!","いいですね！（少し改まった）","That's so nice!","いいね！（会話的）","会話では That's 〜! が自然。"]],
+ use:[["What a coincidence!","なんて偶然！",""],["What a relief!","ほっとした！",""],["What a small world!","世間は狭いね！","思わぬところで知り合いに会ったときに。"],["How exciting!","わくわくするね！",""]]},
+wantto:{deep:["英語は「誰が」を動詞のすぐ後ろに置き、そのあとに to + 動詞で「何をするか」を続ける。I want you to come. は「私は望む → あなたが → 来ることを」の順。","日本語の「〜してほしい」に引っぱられて、I want that 〜 や I hope you to 〜 と言いやすい。hope は人を入れられない：I hope you can come."],
+ miss:[["× I want that you come.","○ I want you to come.","want は that 〜 をとらない。"],["× I hope you to come.","○ I hope you can come. ／ I hope you'll come.","hope は「人 + to」の形をとらない。"],["× Let me to go.","○ Let me go.","let や make のあとは to なし（原形）。"],["× She said me to wait.","○ She told me to wait. ／ She asked me to wait.","say は人を目的語にとれない。"]],
+ nuance:[["I want you to come.","来てほしい（強め・直接的）","I'd like you to come.","来ていただけるとうれしい（丁寧）","目上の人には would like。"],["He told me to wait.","待つように言われた（指示）","He asked me to wait.","待ってほしいと頼まれた（お願い）","tell は指示、ask はお願い。"]],
+ use:[["I'd like you to meet my friend.","友達を紹介するね。","人を紹介するときの決まり文句。"],["Do you want me to help?","手伝おうか？","Do you want me to 〜? で「〜しようか」。"],["Remind me to call him.","彼に電話するのを忘れてたら言ってね。",""],["Tell her to call me back.","折り返し電話するよう彼女に伝えて。",""]]},
+perception:{deep:["原形は「出来事をまるごと」、-ing は「進行中の場面を切り取ったもの」。進行形（be + -ing）と同じ感覚。","日本語の「〜するのが見えた・聞こえた」は、この形で言える。see, hear のほか watch, notice, feel も同じ。"],
+ miss:[["× I saw him to go out.","○ I saw him go out.","see のあとは to なし。"],["× I heard her sang.","○ I heard her sing. ／ I heard her singing.","過去形にしない。原形か -ing。"],["× I watched him swam.","○ I watched him swim.",""]],
+ nuance:[["I saw him cross the road.","彼が道を渡るのを見た（渡りきるまで）","I saw him crossing the road.","彼が道を渡っているところを見た（途中）","全部か、途中の一場面か。"],["I heard her sing.","彼女が歌うのを聞いた（1曲まるごと）","I heard her singing.","彼女が歌っているのが聞こえてきた","-ing は「たまたま耳に入った」感じが出る。"]],
+ use:[["I saw it coming.","そうなると思ってた。","予想どおりの展開に。"],["I've never heard him complain.","彼が文句を言うのを聞いたことがない。",""],["Did you feel the earthquake?","地震、揺れたの気づいた？",""],["I can smell something good cooking.","何かいいにおいがする。",""]]},
+takecost:{deep:["take はもともと「（必要なものを）取る」。It takes an hour. は「それは1時間を取る」＝1時間かかる。お金の cost も同じ形で、主語は It か物。","spend は人が主語で「（時間・お金を）使う」：I spent two hours on it.（それに2時間使った）。take は「かかる（必要だった）」、spend は「（自分で）使った」。"],
+ miss:[["× It needs 30 minutes to get there.","○ It takes 30 minutes to get there.","時間がかかるは take。"],["× How long time does it take?","○ How long does it take?","How long だけで「どのくらいの時間」。time はいらない。"],["× This shirt costed 5,000 yen.","○ This shirt cost 5,000 yen.","cost の過去形は cost。"],["× I took 10,000 yen for dinner.","○ I spent 10,000 yen on dinner.","人がお金を使うのは spend。"]],
+ nuance:[["It took me an hour.","1時間かかった（必要だった）","I spent an hour on it.","それに1時間使った（自分で費やした）","take は必要だった時間、spend は使った時間。"],["It costs a lot.","お金がかかる","It's expensive.","値段が高い","cost は「費用がかかる」、expensive は「高い」。"]],
+ use:[["How long does it take?","どのくらいかかりますか？",""],["It won't take long.","すぐ終わるよ。",""],["It costs nothing to ask.","聞くだけならタダだよ。",""],["Take your time.","ゆっくりでいいよ。",""]]},
+phrasal:{deep:["句動詞は、ネイティブが会話でいちばんよく使う動詞の形。postpone より put off、cancel より call off、discover より find out のほうが日常的。","目的語が it や them のときは、間にはさむ：Turn it off.（× Turn off it）。名詞ならどちらでもいい：Turn off the light. ／ Turn the light off."],
+ miss:[["× Turn off it.","○ Turn it off.","it や them は間にはさむ。"],["× I gave up to smoke.","○ I gave up smoking.","give up のあとは -ing。"],["× Please take on your shoes.","○ Please take off your shoes.","「脱ぐ」は take off、「はく・着る」は put on。"]],
+ nuance:[["Put on your coat.","コートを着て（着る動作）","Wear your coat.","コートを着ていって（着ている状態）","put on は動作、wear は状態。"],["Turn down the music.","音楽の音を小さくして","Turn off the music.","音楽を止めて","down は「下げる」、off は「止める」。"]],
+ use:[["Hang on a second.","ちょっと待って。","電話でもよく使う。"],["I'll figure it out.","なんとかするよ。",""],["Check it out!","見てみて！",""],["Count me in.","私も参加する（入れて）。",""]]},
+prepping:{deep:["前置詞のあとには名詞が来る。動詞を名詞の形にしたものが -ing（動名詞）なので、前置詞のあとの動詞はいつも -ing になる。","by -ing は「〜することによって」、instead of -ing は「〜する代わりに」、without -ing は「〜せずに」。どれも会話でよく使う。"],
+ miss:[["× after finish work","○ after finishing work ／ after I finish work","前置詞のあとは -ing、または after + 主語 + 動詞。"],["× Thank you for invite me.","○ Thank you for inviting me.",""],["× I'm good at speak English.","○ I'm good at speaking English.",""],["× How about go out for dinner?","○ How about going out for dinner?","How about のあとも -ing。"]],
+ nuance:[["I stopped by the store before going home.","家に帰る前に店に寄った","I stopped by the store before I went home.","家に帰る前に店に寄った","-ing でも、主語 + 動詞でも同じ意味。"],["I learned English by watching movies.","映画を見て英語を覚えた（方法）","I learned English while watching movies.","映画を見ながら英語を覚えた（同時に）","by は方法、while は同時。"]],
+ use:[["Thanks for coming.","来てくれてありがとう。",""],["How about getting coffee?","コーヒーでもどう？",""],["Sorry for being late.","遅れてすみません。",""],["I'm thinking of quitting.","辞めようかと思っている。",""]]},
+maymight:{deep:["might は may の過去形だが、「〜かもしれない」の意味では今や未来の話にも使う。過去の形にすると、確信が少し弱く、遠回しになる。","may not / might not は「〜ではないかもしれない」。can't / couldn't は「〜のはずがない」と強い否定になる。"],
+ miss:[["× Maybe it might rain.","○ It might rain. ／ Maybe it will rain.","maybe と might を一緒に使わない。"],["× He mights come.","○ He might come.","助動詞に s はつかない。"],["× It may be rain tomorrow.","○ It may rain tomorrow.","rain は動詞なので be はいらない。"]],
+ nuance:[["It might rain.","雨が降るかもしれない（半々くらい）","It'll probably rain.","たぶん雨が降る（7〜8割）","probably のほうが確信が強い。"],["Maybe.","かもね","Maybe not.","そうじゃないかもね","会話の短い返事に便利。"]],
+ use:[["I might be a little late.","少し遅れるかもしれない。",""],["You might want to check again.","もう一度確認したほうがいいかもね。","やわらかいアドバイス。"],["It could be worse.","もっと悪いこともありえた（まだましだよ）。",""],["May I ask a question?","質問してもよろしいですか？","may は丁寧に許可を求めるときにも使う。"]]},
+suggest:{deep:["Let's は Let us の短い形。「私たちに〜させて」から「一緒に〜しよう」になった。","Why don't you 〜? は、相手にやさしくすすめる言い方。命令（Ask him.）より押しつけがましくない。"],
+ miss:[["× Let's going.","○ Let's go.","Let's のあとは原形。"],["× Let's not to worry.","○ Let's not worry.","否定は Let's not + 原形。"],["× How about to meet tomorrow?","○ How about meeting tomorrow?",""]],
+ nuance:[["Let's go.","行こう（決めた）","Shall we go?","行きましょうか（相手に聞く）","Shall we は相手の気持ちを確かめる。"],["Why don't you try it?","試してみたら？（すすめる）","Why didn't you try it?","どうして試さなかったの？（責める）","don't と didn't で意味がまったくちがう。"]],
+ use:[["Let's keep in touch.","これからも連絡を取り合おうね。",""],["Why don't we grab lunch?","お昼でも食べに行かない？",""],["How about this one?","これはどう？","買い物で。"],["Shall I open the window?","窓を開けましょうか？","Shall I は「私が〜しましょうか」。"]]},
+pastprog:{deep:["過去進行形は、過去のある時点で「カメラを止めた」ときの場面。I was watching TV. は「そのとき、テレビを見ている最中だった」という一場面を描く。","出来事を話すとき、背景（〜していた）は過去進行形、起きたこと（〜した）は過去形にすると、自然な話し方になる。"],
+ miss:[["× I was knowing the answer.","○ I knew the answer.","know などの状態の動詞は進行形にしない。"],["× When I arrived, they ate dinner.（食べている途中だった、のつもりで）","○ When I arrived, they were eating dinner.","途中だったなら進行形。"],["× I was call you yesterday.","○ I called you yesterday. ／ I was calling you.","was のあとは -ing。"]],
+ nuance:[["When I got home, she cooked dinner.","私が帰ってから、彼女は夕食を作った","When I got home, she was cooking dinner.","私が帰ったとき、彼女は夕食を作っていた","過去形は「そのあとで」、進行形は「その最中」。"],["I was thinking about you.","あなたのことを考えていたよ（しばらく）","I thought about you.","あなたのことを考えた（一度）","進行形は続いていた感じと、やわらかさが出る。"]],
+ use:[["I was just thinking the same thing!","ちょうど同じこと考えてた！",""],["Sorry, what were you saying?","ごめん、何て言ってたっけ？","話をさえぎったあとに。"],["I was wondering if you could help me.","手伝っていただけないかと思いまして。","丁寧なお願い。"],["What were you doing when the earthquake hit?","地震のとき何してた？",""]]},
+perfprog:{deep:["have been -ing は、現在完了（過去から今へのつながり）と進行形（続いている途中）を合わせた形。だから「今まで、ずっと続けている」になる。","live, work, study などは、現在完了でも現在完了進行形でもほとんど同じ意味：I've lived here for ten years. ／ I've been living here for ten years."],
+ miss:[["× I'm studying English for three years.","○ I've been studying English for three years.","for + 期間で今まで続いているなら現在完了進行形。"],["× I've been knowing her since college.","○ I've known her since college.","know は進行形にしない。"],["× It's raining since this morning.","○ It's been raining since this morning.",""]],
+ nuance:[["I've been painting the room.","部屋を塗っていた（まだ途中かも。服にペンキがついている）","I've painted the room.","部屋を塗り終えた","進行形は「やっていた最中」、完了形は「終わった結果」。"],["What have you been doing?","最近何してたの？","What have you done?","何をしてしまったの？","What have you done? は責める響きになることがある。"]],
+ use:[["I've been meaning to call you.","ずっと電話しようと思ってたんだ。",""],["What have you been up to?","最近どうしてた？","久しぶりに会ったときに。"],["I've been looking forward to this.","これをずっと楽しみにしていた。",""],["It's been a while!","久しぶり！","It has been の短い形。"]]},
+subjq:{deep:["Tom called. の Tom がわからないとき、Tom を Who に変えるだけで Who called? になる。主語はもともと動詞の前にあるので、語順を変える必要がない。","目的語（〜を・〜に）をたずねるときは、ふつうの疑問文（Did you call Tom?）の Tom を Who に変えて前に出す：Who did you call?"],
+ miss:[["× Who did tell you?","○ Who told you?","「誰が」なので did はいらない。"],["× What did happen?","○ What happened?",""],["× Who you met?","○ Who did you meet?","「誰に」なら did が必要。"]],
+ nuance:[["Who called you?","誰があなたに電話したの？","Who did you call?","あなたは誰に電話したの？","did があるかどうかで、電話した人がちがう。"],["What makes you happy?","何があると幸せ？","What do you do to stay happy?","幸せでいるために何をしている？","What makes you 〜? は「何があなたを〜させる？」という自然な聞き方。"]],
+ use:[["What's going on?","どうしたの？／何が起きてるの？",""],["Who's coming tonight?","今夜は誰が来るの？",""],["What brings you here?","どうしてここに？","「何があなたをここに連れてきた？」"],["Which one is better?","どっちがいい？",""]]},
+metoo:{deep:["So do I. は「私もそうする」、Neither do I. は「私もしない」を短く言った形。後ろの語順は「動詞 + 主語」とひっくり返る。","Me too / Me neither は会話向け、So do I / Neither do I は少しきちんとした言い方。どちらも使える。"],
+ miss:[["× I don't know. — Me too.","○ Me neither.","否定には neither。"],["× I like it. — So I do.","○ So do I.","So のあとは動詞が先。"],["× I'm busy. — So do I.","○ So am I.","be動詞の文には am。"]],
+ nuance:[["Me too.","私も（気軽）","Same here.","こっちも同じ","Same here は肯定にも否定にも使える便利な言い方。"],["Neither do I.","私もしない","I don't either.","私もしない","either は否定文の「〜も」。意味は同じ。"]],
+ use:[["Same here.","こっちも同じだよ。",""],["Me neither.","私も（〜ない）。",""],["So did I!","私もそうだった！","過去の話には did。"],["Same to you!","あなたもね！","Have a nice day! への返事などに。"]]},
+whatrel:{deep:["what は「（その）こと・もの」を自分の中に含んでいるので、前に名詞はいらない。the thing that I want ＝ what I want。","What I mean is 〜（私が言いたいのは〜）、What I like about 〜 is …（〜の好きなところは…）は、会話で考えをまとめるときにとても便利。"],
+ miss:[["× The thing what I want is time.","○ What I want is time. ／ The thing that I want is time.","名詞があるなら that。"],["× I can't believe that he said.","○ I can't believe what he said.","「彼の言ったこと」は what。"],["× Everything what you need is here.","○ Everything (that) you need is here.","everything のあとは that（省いてもいい）。"]],
+ nuance:[["I know what you mean.","言いたいことわかるよ（共感）","I know that you mean it.","本気で言っているのはわかる","what は「〜すること」、that は「〜ということ」。"],["What I need is sleep.","必要なのは睡眠だ（強調）","I need sleep.","睡眠が必要だ","What 〜 is … で、言いたいことを最後に置いて強めている。"]],
+ use:[["That's what I mean.","それが言いたかったんだ。",""],["What I mean is, I need more time.","つまり、もう少し時間がほしいってこと。",""],["You get what you pay for.","安物買いの銭失い（払った分のものしか手に入らない）。",""],["Do what you love.","好きなことをしよう。",""]]},
+unless:{deep:["unless は「〜という例外を除いて」というイメージ。I'll go unless it rains. は「雨という例外がなければ行く」。","in case は「あとで〜になったときのために、今」準備する言い方。just in case だけで「念のため」として使える。"],
+ miss:[["× Unless it doesn't rain, I'll go.","○ Unless it rains, I'll go. ／ If it doesn't rain, I'll go.","unless に not を重ねない。"],["× in case it will rain","○ in case it rains","in case の中は未来でも現在形。"],["× as long as you will help","○ as long as you help","as long as の中も現在形。"]],
+ nuance:[["Take a coat in case it gets cold.","寒くなるといけないからコートを持っていって（今、持っていく）","Take a coat if it gets cold.","寒くなったらコートを持っていって（寒くなってから）","in case は前もって備える、if はその時になったら。"],["I'll come unless I'm busy.","忙しくなければ行く","I'll come if I'm not busy.","忙しくなければ行く","ほぼ同じ意味。unless のほうが「例外」が強調される。"]],
+ use:[["Just in case.","念のため。",""],["As long as you're happy.","あなたが幸せならそれでいい。",""],["Unless you have a better idea, let's go with this.","もっといい案がなければ、これでいこう。",""],["Here's my number in case you need anything.","何かあったときのために、私の番号を渡しておくね。",""]]},
+evenif:{deep:["if は「もし」、though は「〜だけれど」。それぞれに even（〜でさえ）をつけて強めたのが even if と even though。だから even if は仮の話、even though は本当のこと。","even if の文では、未来のことでも現在形を使う：Even if it rains tomorrow, we'll go."],
+ miss:[["× Even I was tired, I went to work.","○ Even though I was tired, I went to work.","文をつなぐなら even though。even だけではつなげない。"],["× Even if it will rain, we'll go.","○ Even if it rains, we'll go.",""],["× Even though I become rich someday, I'll keep working.","○ Even if I become rich someday, I'll keep working.","仮の話は even if。"]],
+ nuance:[["Even if he apologizes, I won't forgive him.","（もし）謝ったとしても許さない","Even though he apologized, I didn't forgive him.","（実際に）謝ったけど許さなかった","仮の話か、本当にあったことか。"],["Although it was cold, we swam.","寒かったけど泳いだ","Even though it was cold, we swam.","寒かったのに泳いだ","even though のほうが「それなのに」という驚きが強い。"]],
+ use:[["Even so, I think we should try.","それでも、やってみるべきだと思う。","even so は「それでも」。"],["Even if you fail, it's not the end.","失敗しても終わりじゃないよ。",""],["I didn't even notice.","気づきもしなかった。",""],["Even better!","なおさらいいね！","比較級を強める even。"]]},
+nounto:{deep:["to + 動詞は「これから〜する」という向きを表す。something to drink は「これから飲む何か」なので「飲み物」になる。","日本語の「〜するための」「〜すべき」「〜する」は、たいていこの形で言える：homework to finish（終わらせるべき宿題）、a chance to meet（会う機会）。"],
+ miss:[["× I want something drink.","○ I want something to drink.","to が必要。"],["× It's time for go to bed.","○ It's time to go to bed. ／ It's time for bed.","time to + 動詞、time for + 名詞。"],["× I need a chair to sit.","○ I need a chair to sit on.","sit on a chair の on が残る。"]],
+ nuance:[["I have nothing to do.","やることがない（暇）","I have nothing to do with it.","私はそれとは関係ない","have nothing to do with は「〜と関係がない」という決まった言い方。"],["It's time to go.","もう行く時間だ","It's time we went.","もう行かなきゃ（遅いくらいだ）","It's time + 過去形は「もう〜すべき時だ」という強めの言い方。"]],
+ use:[["Nice to meet you.","はじめまして。","これも to + 動詞の形。"],["Anything to drink?","何か飲む？",""],["There's nothing to worry about.","心配することは何もないよ。",""],["I have a lot of things to do today.","今日はやることがたくさんある。",""]]},
 };
 const GR_CATS=["前置詞","名詞・冠詞","形容詞・副詞","動詞の形","助動詞・仮定法","時制","疑問・否定","文をつなぐ"];
 let dfMode="word",grCur="place",grBusy=false,grQuiz={},grCache={};
@@ -2374,6 +2557,7 @@ function tlSvg(kind){
   if(kind==="perfect")mk.push(`<line x1="80" y1="${y}" x2="${now}" y2="${y}" class="tlb"/><circle cx="80" cy="${y}" r="5" class="tlm"/><text x="140" y="${y-12}" class="tlt">過去から今まで</text>`);
   if(kind==="pastperfect")mk.push(`<circle cx="70" cy="${y}" r="6" class="tlm"/><text x="70" y="${y-12}" class="tlt">先に起きた</text><line x1="140" y1="${y-9}" x2="140" y2="${y+9}" class="tlp"/><text x="140" y="${y+22}" class="tlt">過去のある時点</text>`);
   if(kind==="habit")mk.push([60,100,140,180,220,260].map(x=>`<circle cx="${x}" cy="${y}" r="4" class="tlm"/>`).join("")+`<text x="160" y="${y-12}" class="tlt">いつも・くり返し</text>`);
+  if(kind==="pastprog")mk.push(`<line x1="70" y1="${y}" x2="150" y2="${y}" class="tlb"/><text x="110" y="${y-12}" class="tlt">していた途中</text><circle cx="125" cy="${y}" r="5" class="tlm"/><text x="125" y="${y+22}" class="tlt">出来事</text>`);
   if(kind==="progressive")mk.push(`<line x1="172" y1="${y}" x2="228" y2="${y}" class="tlb"/><text x="200" y="${y-12}" class="tlt">今している途中</text>`);
   if(kind==="future")mk.push(`<circle cx="268" cy="${y}" r="6" class="tlm"/><text x="268" y="${y-12}" class="tlt">これから</text>`);
   return `<svg viewBox="0 0 320 56" class="tl" role="img" aria-label="時間の図"><line x1="12" y1="${y}" x2="308" y2="${y}" class="tla"/>
