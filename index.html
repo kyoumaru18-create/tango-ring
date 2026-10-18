@@ -365,10 +365,13 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .evsum{display:flex;flex-direction:column;gap:4px;background:var(--paper);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
 .evsum pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin:0}
 .dgbtn{border-color:var(--accent);color:var(--accent)}
-.dgres{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.dgres{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .dgres div{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--paper);border-radius:10px;padding:8px 4px;font-size:13px}
 .dgres b{color:var(--accent);letter-spacing:.1em}
-.dgres small{color:var(--muted)}
+.dgres small{color:var(--muted);font-size:11px;text-align:center}
+.dgres div.on{outline:2px solid var(--accent)}
+.dgbar{display:block;width:80%;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.dgbar i{display:block;height:100%;background:var(--accent)}
 .gbtn{align-self:flex-start;display:inline-flex;gap:10px;align-items:center;background:#fff;color:#1f1f1f;border:1px solid #747775;font-weight:500}
 .gbtn svg{width:18px;height:18px;flex:none}
 .chip.used{background:var(--good-bg);color:var(--good)}
@@ -435,7 +438,7 @@ details.flash{animation:flash 1.2s ease}
         <div class="dfchips" id="thchips"></div>
         <div class="note" id="lvCount" style="margin:0"></div>
         <button class="btn primary" id="lvApply" disabled>この内容で更新する</button>
-        <button class="linkbtn" id="lvDiag" type="button" style="align-self:flex-start">どれがいいか迷ったら：かんたんレベル診断（1分）</button>
+        <button class="linkbtn" id="lvDiag" type="button" style="align-self:flex-start">どれがいいか迷ったら：かんたんレベル診断（2分くらい）</button>
         <div id="lvMsg" class="err"></div>
         <div id="lvDone" class="note" style="color:var(--good)"></div>
         <div class="note">選んだレベルとテーマから新しいカードが出ます（どちらも複数選択可）。クイズとリスニングも同じ範囲から出題します。</div><div class="note" style="font-size:12px">単語のレベルはCEFR-J Wordlist（東京外国語大学 投野由紀夫研究室）と Octanove Vocabulary Profile C1/C2（CC BY-SA 4.0）で判定し、英検・TOEICとは文部科学省などが公表しているCEFR対照表で対応づけています。リストにない語は、内容を見て判定しています（多くは上級）。一部の語は、日常での使われ方を見て調整しています。級・スコアはあくまで目安です。単語・例文・文法の説明は点検していますが、まちがいが残っている可能性があります。発音記号（アメリカ英語）は CMU Pronouncing Dictionary（Copyright © 1993-2015 Carnegie Mellon University）をもとに作成しています。</div>
@@ -1075,41 +1078,67 @@ function updBadge(){const b=document.querySelector('.tabs [data-tab="cards"]');i
   s.setAttribute("aria-label","残り"+queue.length+"枚")}
 // 初めて開いた人への案内（カードを1枚も進めていないときだけ。「はじめる」を押したら出さない）
 let helloDone=false;try{helloDone=!!localStorage.getItem(LS+"-hello")}catch(e){}
-/* ---------- かんたんレベル診断（12問・1分） ----------
-   基礎・標準・応用・上級から3語ずつ、4択で意味を選ぶ（わからないも可）。2問以上正解したレベルは「だいたい知っている」とみなし、
-   はじめて2問未満だったレベルとその1つ上をすすめる（例：基礎はできて標準が苦手 → 標準・応用。基礎も2問未満なら 入門・基礎）。結果はすすめるだけで、選び直せる */
-let diag=null;   // {qs:[{w,opts,pick}], i, from:"hello"|"panel"}
-function startDiag(from){
-  const ws=allWords().filter(w=>w.lv&&w.pos!=="phrase"&&!/\s/.test(w.w));
-  const qs=[];for(const lv of [1,2,3,4]){const pool=shuffle(ws.filter(w=>w.lv===lv)).slice(0,3);
-    for(const w of pool){const seen=new Set([w.ja]),ds=[];
-      for(const x of shuffle(ws.filter(x=>x.lv===lv&&x.pos===w.pos&&x.id!==w.id))){if(ds.length>=3)break;if(!seen.has(x.ja)){seen.add(x.ja);ds.push(x)}}
-      qs.push({w,opts:shuffle([w,...ds]),pick:null})}}
-  diag={qs:shuffle(qs),i:0,from};closeDrawer();renderCards();window.scrollTo(0,0);
+/* ---------- かんたんレベル診断（15〜20問・2分くらい） ----------
+   2026-10-19 に作り直した（前は各レベル3問ずつの12問で、当てずっぽうの正解に引っぱられた）。
+   - 1つのレベルを6問ずつ見る。結果があいまい（知っている割合 45〜85%）なら4問足して10問で決める。
+   - 当てずっぽうの分を差し引く：知っている割合 ＝（正解 − まちがい÷3）÷ 問題数。「わからない」は0点で引かれない。
+   - 標準から始め、75%以上なら1つ上、足りなければ1つ下を見る（LV_ORDER の順。入門は、基礎も足りないときだけ見る）。
+   - すすめるのは、はじめて75%に届かなかったレベル（とその1つ上）。40%未満なら、そのレベルだけ。
+   - 1万人ぶんの試算で、始めるレベルが合う人 42% → 80%（平均17問）。 */
+let diag=null;   // {est:{lv:割合}, blk:{lv,r,w,c}, q:{w,opts}, used:Set, n, from:"hello"|"panel"}
+const DG_MIN=6,DG_MAX=10,DG_OK=0.75;
+const jaTok=ja=>ja.split(/[、,，・（）()「」〜\s]+/).filter(t=>t.length>=2);
+function diagQ(lv){
+  const ws=allWords().filter(w=>/^b\d/.test(w.id)&&w.lv===lv&&w.pos!=="phrase"&&!/\s/.test(w.w)&&!diag.used.has(w.id));
+  const w=ws[Math.floor(Math.random()*ws.length)];diag.used.add(w.id);
+  // まちがいの選択肢：同じレベル・同じ品詞で、意味の言葉が重ならないもの（答えが2つに見えないように）
+  const toks=new Set(jaTok(w.ja)),ds=[];
+  for(const x of shuffle(ws.filter(x=>x.pos===w.pos&&x.id!==w.id))){if(ds.length>=3)break;
+    const xt=jaTok(x.ja);if(xt.some(t=>toks.has(t))||ds.some(d=>d.ja===x.ja))continue;ds.push(x);xt.forEach(t=>toks.add(t))}
+  return {w,opts:shuffle([w,...ds])};
 }
-function diagResult(){
-  const ok={1:0,2:0,3:0,4:0};diag.qs.forEach(q=>{if(q.pick===q.w.id)ok[q.w.lv]++});
-  let L=[1,2,3,4].find(l=>ok[l]<2)||4;const levels=L>=4?[3,4]:L===1?[5,1]:[L,L+1];   // 基礎も2問未満なら、入門からすすめる
-  return {ok,levels};
+function startDiag(from){
+  diag={est:{},blk:{lv:2,r:0,w:0,c:0},used:new Set(),n:0,from};diag.q=diagQ(2);
+  closeDrawer();renderCards();window.scrollTo(0,0);
+}
+const dgEst=b=>Math.max(0,(b.r-b.w/3)/b.c);
+function diagAnswer(pick){const b=diag.blk,q=diag.q;
+  b.c++;diag.n++;if(pick===q.w.id)b.r++;else if(pick!=="?")b.w++;
+  const e=dgEst(b);
+  if(b.c<DG_MAX&&!(b.c>=DG_MIN&&!(e>=0.45&&e<0.85))){diag.q=diagQ(b.lv);return}
+  diag.est[b.lv]=e;
+  // 次に見るレベル：できたら1つ上、できなかったら1つ下（まだ見ていなければ）
+  const i=LV_RANK[b.lv],nx=e>=DG_OK?LV_ORDER[i+1]:LV_ORDER[i-1];
+  if(nx!=null&&diag.est[nx]==null){diag.blk={lv:nx,r:0,w:0,c:0};diag.q=diagQ(nx)}else diag.q=null;
+}
+function diagResult(){const est=diag.est;
+  const L=LV_ORDER.find(l=>est[l]!=null&&est[l]<DG_OK),nx=L==null?null:LV_ORDER[LV_RANK[L]+1];
+  const levels=L==null?[4]:est[L]<0.4||nx==null?[L]:[L,nx];
+  return {est,levels};
 }
 function renderDiag(area){
-  if(diag.i<diag.qs.length){
-    const q=diag.qs[diag.i];
+  if(diag.q){
+    const q=diag.q,b=diag.blk;
     area.innerHTML=`<div class="panel fade"><div class="row" style="justify-content:space-between"><div class="label">かんたんレベル診断</div><button class="linkbtn" id="dgStop" type="button">やめる</button></div>
-      <div class="progress"><span>${diag.i+1} / ${diag.qs.length}</span><span>知っている意味を選んでください</span></div><div class="bar"><i style="width:${diag.i/diag.qs.length*100}%"></i></div>
+      <div class="progress"><span>${diag.n+1}問目（15〜20問くらい）</span><span>${LEVELS[b.lv].name}の単語</span></div><div class="bar"><i style="width:${Math.min(95,diag.n/18*100)}%"></i></div>
       <div class="qbig" style="margin-top:6px">${esc(q.w.w)}</div><div class="note" style="margin:0">${POS_JA[q.w.pos]||""}</div>
       <div class="opts">${q.opts.map(o=>`<button class="opt" data-dg="${o.id}"><span>${esc(o.ja)}</span></button>`).join("")}</div>
-      <button class="btn ghost" id="dgDk" style="align-self:flex-start">わからない</button></div>`;
-    const next=pick=>{q.pick=pick;diag.i++;renderDiag(area)};
+      <button class="btn ghost" id="dgDk" style="align-self:flex-start">わからない</button>
+      ${diag.n<2?`<div class="note" style="margin:0">知らない単語は、当てずっぽうで選ばずに「わからない」を押してください。そのほうが正確に診断できます。</div>`:""}</div>`;
+    const next=pick=>{diagAnswer(pick);renderDiag(area)};
     area.querySelectorAll("[data-dg]").forEach(b=>b.onclick=()=>next(b.dataset.dg));$("#dgDk").onclick=()=>next("?");
     $("#dgStop").onclick=()=>{diag=null;renderCards()};return}
-  const {ok,levels}=diagResult(),names=levels.map(l=>LEVELS[l].name).join("・"),eiken=levels.map(l=>LEVELS[l].eiken).join("／");
+  const {est,levels}=diagResult(),names=levels.map(l=>LEVELS[l].name).join("・"),eiken=levels.map(l=>LEVELS[l].eiken).join("／");
+  const tested=Object.keys(est).map(Number).map(l=>LV_RANK[l]),lo=Math.min(...tested);
+  const cell=l=>{const v=est[l];
+    if(v!=null){const pc=Math.round(Math.min(1,v)*100);return `<b>${pc}%</b><i class="dgbar"><i style="width:${pc}%"></i></i><small>${v>=DG_OK?"だいたいわかる":v>=0.4?"半分くらい":"これから"}</small>`}
+    return LV_RANK[l]<lo?`<b>—</b><small>だいたいわかる</small>`:`<b>—</b><small>まだ先</small>`};
   area.innerHTML=`<div class="panel fade"><div class="label">診断の結果</div>
     <div style="font-size:18px;font-weight:700">おすすめは「${esc(names)}」</div><div class="note" style="margin:0">${esc(eiken)} くらいの単語です。</div>
-    <div class="dgres">${[1,2,3,4].map(l=>`<div><span>${LEVELS[l].name}</span><b>${"●".repeat(ok[l])}${"○".repeat(3-ok[l])}</b><small>${ok[l]}/3</small></div>`).join("")}</div>
-    <div class="note" style="margin:0">だいたいわかったレベルは飛ばして、少し難しいところから始めます。あとで「レベル・テーマ」からいつでも変えられます。</div>
+    <div class="dgres">${LV_ORDER.map(l=>`<div class="${levels.includes(l)?"on":""}"><span>${LEVELS[l].name}</span>${cell(l)}</div>`).join("")}</div>
+    <div class="note" style="margin:0">％は「知っている単語の割合」の目安です（当てずっぽうの分は差し引いています）。だいたいわかるレベルは飛ばして、覚えることの多いレベルから始めます。あとで「レベル・テーマ」からいつでも変えられます。</div>
     <div class="row"><button class="btn primary" id="dgUse" type="button">このレベルではじめる</button><button class="btn" id="dgSelf" type="button">自分で選ぶ</button></div></div>`;
-  logEvent("feature","診断 "+[1,2,3,4].map(l=>ok[l]).join("")+" → "+levels.join(","),true);
+  logEvent("feature","診断 "+LV_ORDER.map(l=>est[l]==null?"-":Math.round(est[l]*10)).join(",")+" → "+levels.join(",")+"（"+diag.n+"問）",true);
   $("#dgUse").onclick=()=>{state.levels=levels;ratioFresh=pickFresh(npd()).map(w=>w.id);const from=diag.from;diag=null;
     if(from==="hello"){helloDone=true;try{localStorage.setItem(LS+"-hello","1")}catch(e){}}
     save();buildQueue();renderLevels();renderCards();renderQuickbar();window.scrollTo(0,0)};
@@ -1126,7 +1155,7 @@ function renderHello(area){
     </ol>
     <div class="note">いつでも好きなだけ続けられます。8枚ごとに区切って結果が出て、覚えてきたら新しい単語が自動で足されます（1回の数は設定で5〜100に変えられます）。カードで覚えた単語が、クイズ・リスニング・AI英会話にも出てきます。</div>
     <div class="label" style="margin-top:4px">レベルを選ぶ（いくつでも。あとで変えられます）</div>
-    <button class="btn dgbtn" id="helloDiag" type="button">迷ったら：かんたん診断で選ぶ（1分・12問）</button>
+    <button class="btn dgbtn" id="helloDiag" type="button">迷ったら：かんたん診断で選ぶ（2分くらい）</button>
     <div class="scen" id="helloLv">${LV_LIST.map(([k,L])=>`<button data-lv="${k}" aria-pressed="${state.levels.includes(+k)}"><b>${L.name}</b><span>${L.eiken}</span></button>`).join("")}</div>
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」</b>ボタンと、右上の<b>設定ボタン（丸いアイコン）</b>からいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
