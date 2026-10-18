@@ -282,7 +282,7 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .dfex>div{min-width:0;flex:1}
 .dfng{font-size:13px;color:var(--warn)}
 .grcat{display:flex;flex-direction:column;gap:4px}
-.qskip{align-self:flex-end;margin-top:-6px}
+.qskip{margin-top:4px}   /* カードの「意味を見る」と同じ形。選択肢とまちがえないよう、色つきで少し離す */
 .grjump{gap:4px}.grjump button{font-size:12px;min-height:30px;padding:2px 10px;background:var(--card)}
 #dfOut [id^="gr-"]{scroll-margin-top:12px}
 .grp{font-size:14px;line-height:1.8}
@@ -1584,11 +1584,12 @@ function renderQuiz(){
     // やめる：答えた問題だけで結果を出す（1問も答えていなければ準備の画面へ）。途中でやめた回は自己ベストに数えない
     $("#qQuit").onclick=()=>{const done=quiz.qs.filter(x=>x.pick!==null);if(!done.length){startQuiz("speed");return}
       quiz.qs=done;quiz.i=done.length;quiz.paused=false;quiz.quit=true;renderQuiz()};return}
-  a.innerHTML=(quiz.i===0&&!ans&&!sp?quizModeHtml():"")+`<div class="qhead"><span>${quiz.mode==="weak"?"QUIZ ・ 苦手":sp?`QUIZ ・ スピード ${QSEC[qSecKey()].s}秒`:"QUIZ"}</span><span>${quiz.i+1} / ${quiz.qs.length}　正解 ${quiz.score}${sp?` <button class="linkbtn" id="qPause" type="button" style="margin-left:6px">⏸ 一時停止</button>`:""}</span></div>${ans?"":`<button class="linkbtn qskip" id="qDk" type="button">この問題を飛ばす ›</button>`}<div class="bar"><i style="width:${quiz.i/quiz.qs.length*100}%"></i></div>
+  a.innerHTML=(quiz.i===0&&!ans&&!sp?quizModeHtml():"")+`<div class="qhead"><span>${quiz.mode==="weak"?"QUIZ ・ 苦手":sp?`QUIZ ・ スピード ${QSEC[qSecKey()].s}秒`:"QUIZ"}</span><span>${quiz.i+1} / ${quiz.qs.length}　正解 ${quiz.score}${sp?` <button class="linkbtn" id="qPause" type="button" style="margin-left:6px">⏸ 一時停止</button>`:""}</span></div><div class="bar"><i style="width:${quiz.i/quiz.qs.length*100}%"></i></div>
     <div class="qprompt">${prompt}</div>${big}
     ${sp&&!ans?`<div class="row" style="flex-wrap:nowrap;gap:10px;align-items:center"><div class="qtime" id="qTime" style="flex:1"><i id="qTimeBar"></i></div><span class="note" id="qTimeTxt" style="margin:0;min-width:3em;text-align:right" aria-live="off"></span></div>`:""}
     <div class="opts">${q.opts.map(o=>{let cls="opt"+(isEn?" en":"");if(ans){if(o.id===w.id)cls+=" right";else if(o.id===q.pick)cls+=" wrong"}
       return `<button class="${cls}" data-o="${o.id}" ${ans?"disabled":""}><span>${esc(isEn?o.w:o.ja)}</span>${ans&&o.id===w.id?"<span>✓</span>":ans&&o.id===q.pick?"<span>×</span>":""}</button>`}).join("")}</div>
+    ${ans?"":`<button class="btn primary qskip" id="qDk" type="button">この問題を飛ばす</button>`}
     ${ans&&sp?`<div class="verdict ${q.pick===w.id?"ok":"ng"}">${q.pick===w.id?"正解":q.timeout?"時間切れ":dk?"飛ばした問題":"不正解"}${q.ms&&q.pick===w.id?` <span style="font-weight:400">${(q.ms/1000).toFixed(1)}秒</span>`:""}　<span style="font-weight:400">${esc(w.w)} ＝ ${esc(w.ja)}</span></div>`:""}
     ${ans&&!sp?`<div class="explain"><div><div class="verdict ${q.pick===w.id?"ok":"ng"}">${q.pick===w.id?"正解":q.timeout?"時間切れ":dk?"飛ばした問題":"不正解"}${sp&&q.ms&&q.pick===w.id?` <span style="font-weight:400">${(q.ms/1000).toFixed(1)}秒</span>`:""}　<span style="font-weight:400">${esc(w.w)} ＝ ${esc(w.ja)}</span></div>${q.e.ex?`<div class="ex" style="font-size:19px">${markEx(w,q.e.ex)}</div><div class="exja">${esc(q.e.exJa)}</div>`:""}</div>${q.e.ex?spk(q.e.ex):""}</div>
       <div class="others"><div class="label">ほかの選択肢</div>${others}${repFoot("quiz")}</div>
