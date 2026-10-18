@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.a2c154d6.js" as="script">
+<link rel="preload" href="words.5fe39879.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -537,6 +537,7 @@ details.flash{animation:flash 1.2s ease}
           <button class="btn primary" id="genBtn" style="flex:none">8語つくる</button>
         </div>
         <select id="genLv" aria-label="難しさ" style="min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--paper);padding:0 10px">
+          <option value="5">入門（英検5〜4級／中学レベル）</option>
           <option value="1">基礎（英検3級〜準2級／TOEIC 〜545）</option>
           <option value="2" selected>標準（英検2級／TOEIC 550〜）</option>
           <option value="3">応用（英検準1級／TOEIC 785〜）</option>
@@ -678,14 +679,16 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.a2c154d6.js"></script>
+<script src="words.5fe39879.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
 const THEMES={daily:"日常・生活",feel:"気持ち・性格",talk:"会話のつなぎ",work:"仕事",travel:"旅行・外出",money:"買い物・お金",health:"健康・からだ",society:"社会・考え方",env:"環境・自然",issue:"社会問題"};
 const OLD_THEMES=["daily","feel","talk","work","travel","money","health","society"];   // 2026-10-16 に env・issue を足す前のテーマ（全部選んでいた人には新しいテーマも足す）
 const THEME_KEYS=Object.keys(THEMES);
-const LEVELS={1:{name:"基礎",cefr:"A1–A2",eiken:"英検3級〜準2級",toeic:"TOEIC 〜545",short:"基礎"},2:{name:"標準",cefr:"B1",eiken:"英検2級",toeic:"TOEIC 550〜",short:"2級"},3:{name:"応用",cefr:"B2",eiken:"英検準1級",toeic:"TOEIC 785〜",short:"準1級"},4:{name:"上級",cefr:"C1〜",eiken:"英検1級",toeic:"TOEIC 945〜",short:"1級"}};
+// 入門（5）は 2026-10-18 に足した中学レベルの基本語。進み具合や保存した選択がずれないよう、番号は1〜4のまま5を足し、並びは LV_ORDER で入門を先にする
+const LEVELS={5:{name:"入門",cefr:"A1",eiken:"英検5〜4級",toeic:"中学レベル",short:"入門"},1:{name:"基礎",cefr:"A1–A2",eiken:"英検3級〜準2級",toeic:"TOEIC 〜545",short:"基礎"},2:{name:"標準",cefr:"B1",eiken:"英検2級",toeic:"TOEIC 550〜",short:"2級"},3:{name:"応用",cefr:"B2",eiken:"英検準1級",toeic:"TOEIC 785〜",short:"準1級"},4:{name:"上級",cefr:"C1〜",eiken:"英検1級",toeic:"TOEIC 945〜",short:"1級"}};
+const LV_ORDER=[5,1,2,3,4],LV_RANK={5:0,1:1,2:2,3:3,4:4},LV_LIST=LV_ORDER.map(k=>[k,LEVELS[k]]),lvSort=a=>a.slice().sort((x,y)=>LV_RANK[x]-LV_RANK[y]);
 
 const POS_JA={verb:"動詞",noun:"名詞",adj:"形容詞",adv:"副詞",phrase:"熟語"};
 const INTERVALS=[0,1,2,4,8,16,32];   // BOX 1〜6 の「次に出す日」までの日数（覚えた単語は、この日が来るまで出にくい）
@@ -908,7 +911,7 @@ function renderRecord(){
   const sum30=days30.reduce((a,d)=>a+cnt(d),0),active30=days30.filter(d=>cnt(d)>0).length,mx=Math.max(10,...days30.map(cnt));
   if(recSel===null||recSel<t-29)recSel=t;
   const tile=(n,unit,label)=>`<div class="tile"><b>${n}<small>${unit}</small></b><span>${label}</span></div>`;
-  const lvRows=Object.entries(LEVELS).map(([k,L])=>{const all=ws.filter(w=>w.lv===+k),m=all.filter(w=>boxOf(w)>=MASTER).length,l=all.filter(w=>state.cards[w.id]&&boxOf(w)<MASTER).length,r=all.length-m-l;
+  const lvRows=LV_LIST.map(([k,L])=>{const all=ws.filter(w=>w.lv===+k),m=all.filter(w=>boxOf(w)>=MASTER).length,l=all.filter(w=>state.cards[w.id]&&boxOf(w)<MASTER).length,r=all.length-m-l;
     const pc=n=>all.length?n/all.length*100:0;
     return `<div class="lvrow"><div class="top"><b>${L.name}<span>　${L.eiken}</span></b><span>定着 ${m} ・ 学習中 ${l} ・ 未学習 ${r}</span></div>
       <div class="lvbar" role="img" aria-label="${L.name}：${all.length}語中、定着${m}、学習中${l}、未学習${r}">${m?`<i class="m" style="width:${pc(m)}%"></i>`:""}${l?`<i class="l" style="width:${pc(l)}%"></i>`:""}${r?`<i class="r" style="width:${pc(r)}%"></i>`:""}</div></div>`}).join("");
@@ -1074,7 +1077,7 @@ function updBadge(){const b=document.querySelector('.tabs [data-tab="cards"]');i
 let helloDone=false;try{helloDone=!!localStorage.getItem(LS+"-hello")}catch(e){}
 /* ---------- かんたんレベル診断（12問・1分） ----------
    基礎・標準・応用・上級から3語ずつ、4択で意味を選ぶ（わからないも可）。2問以上正解したレベルは「だいたい知っている」とみなし、
-   はじめて2問未満だったレベルとその1つ上をすすめる（例：基礎はできて標準が苦手 → 標準・応用）。結果はすすめるだけで、選び直せる */
+   はじめて2問未満だったレベルとその1つ上をすすめる（例：基礎はできて標準が苦手 → 標準・応用。基礎も2問未満なら 入門・基礎）。結果はすすめるだけで、選び直せる */
 let diag=null;   // {qs:[{w,opts,pick}], i, from:"hello"|"panel"}
 function startDiag(from){
   const ws=allWords().filter(w=>w.lv&&w.pos!=="phrase"&&!/\s/.test(w.w));
@@ -1086,7 +1089,7 @@ function startDiag(from){
 }
 function diagResult(){
   const ok={1:0,2:0,3:0,4:0};diag.qs.forEach(q=>{if(q.pick===q.w.id)ok[q.w.lv]++});
-  let L=[1,2,3,4].find(l=>ok[l]<2)||4;const levels=L>=4?[3,4]:[L,L+1];
+  let L=[1,2,3,4].find(l=>ok[l]<2)||4;const levels=L>=4?[3,4]:L===1?[5,1]:[L,L+1];   // 基礎も2問未満なら、入門からすすめる
   return {ok,levels};
 }
 function renderDiag(area){
@@ -1124,7 +1127,7 @@ function renderHello(area){
     <div class="note">いつでも好きなだけ続けられます。8枚ごとに区切って結果が出て、覚えてきたら新しい単語が自動で足されます（1回の数は設定で5〜100に変えられます）。カードで覚えた単語が、クイズ・リスニング・AI英会話にも出てきます。</div>
     <div class="label" style="margin-top:4px">レベルを選ぶ（いくつでも。あとで変えられます）</div>
     <button class="btn dgbtn" id="helloDiag" type="button">迷ったら：かんたん診断で選ぶ（1分・12問）</button>
-    <div class="scen" id="helloLv">${Object.entries(LEVELS).map(([k,L])=>`<button data-lv="${k}" aria-pressed="${state.levels.includes(+k)}"><b>${L.name}</b><span>${L.eiken}</span></button>`).join("")}</div>
+    <div class="scen" id="helloLv">${LV_LIST.map(([k,L])=>`<button data-lv="${k}" aria-pressed="${state.levels.includes(+k)}"><b>${L.name}</b><span>${L.eiken}</span></button>`).join("")}</div>
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」</b>ボタンと、右上の<b>設定ボタン（丸いアイコン）</b>からいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
     <div class="note" style="font-size:12px">${ON_CLAUDE?"AIの機能（ニュアンス・使い分け・AI英会話）は、claude.ai にログインして開くと使えます。ログインしていなくても、カード・クイズ・リスニングは使えます。"
@@ -1132,7 +1135,7 @@ function renderHello(area){
   </div>`;
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
-    state.levels=on?state.levels.filter(x=>x!==lv):state.levels.concat(lv).sort();renderHello(area)});
+    state.levels=on?state.levels.filter(x=>x!==lv):lvSort(state.levels.concat(lv));renderHello(area)});
   $("#helloDiag").onclick=()=>startDiag("hello");
   $("#helloGo").onclick=()=>{helloDone=true;try{localStorage.setItem(LS+"-hello","1")}catch(e){}save();buildQueue();renderLevels();renderCards();window.scrollTo(0,0)};
 }
@@ -1312,7 +1315,7 @@ function renderLevels(){
   $("#lvSum").innerHTML=`<span class="sumtxt"><b>レベルとテーマ</b><small>${esc(state.levels.map(l=>LEVELS[l].name).join("・"))} ・ テーマ ${state.themes.length===THEME_KEYS.length?"すべて":state.themes.length+"つ"}</small></span>`;
   $("#lvApply").disabled=!changed;$("#lvApply").textContent=changed?"この内容で更新する":"この内容で更新する（変更なし）";
   // テーマの数字は「選んでいるレベルの中」の単語数（全部のレベルの数も小さく出す。少なく見えて紛らわしかったため）
-  const allLv=lvDraft.length===Object.keys(LEVELS).length;
+  const allLv=lvDraft.length===LV_ORDER.length;
   $("#thchips").innerHTML=THEME_KEYS.map(k=>{const n=ws.filter(w=>w.cat===k&&(!w.lv||lvDraft.includes(w.lv))).length,all=ws.filter(w=>w.cat===k).length;
     return `<button data-th="${k}" aria-pressed="${thDraft.includes(k)}">${THEMES[k]} <span style="font-size:11px;opacity:.75">${n}語${allLv?"":`<span style="opacity:.8">／全${all}</span>`}</span></button>`}).join("");
   const inRange=ws.filter(w=>w.lv&&lvDraft.includes(w.lv)&&thDraft.includes(w.cat)).length,own=ws.filter(w=>!w.lv).length,base=ws.filter(w=>w.lv).length;
@@ -1322,12 +1325,12 @@ function renderLevels(){
     $("#lvMsg").textContent="";$("#lvDone").innerHTML="";thDraft=on?thDraft.filter(x=>x!==k):thDraft.concat(k);renderLevels()});
   $("#thAll").textContent=thDraft.length===THEME_KEYS.length?"テーマを1つだけにする":"すべて選ぶ";
   $("#thAll").onclick=()=>{$("#lvDone").innerHTML="";thDraft=thDraft.length===THEME_KEYS.length?["daily"]:THEME_KEYS.slice();renderLevels()};
-  $("#lvchips").innerHTML=Object.entries(LEVELS).map(([k,L])=>{const lv=+k,all=ws.filter(w=>w.lv===lv),m=all.filter(w=>boxOf(w)>=MASTER).length;
+  $("#lvchips").innerHTML=LV_LIST.map(([k,L])=>{const lv=+k,all=ws.filter(w=>w.lv===lv),m=all.filter(w=>boxOf(w)>=MASTER).length;
     return `<button data-lv="${lv}" aria-pressed="${lvDraft.includes(lv)}"><b>${L.name}</b><span class="lvinfo">${L.eiken}<br>CEFR ${L.cefr} ・ ${L.toeic}</span><span class="lvinfo">定着 ${m} / ${all.length}語</span></button>`}).join("");
   // 押しただけでは変えない。「このレベルで更新する」で反映する
   $("#lvchips").querySelectorAll("[data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv;const on=lvDraft.includes(lv);
     if(on&&lvDraft.length===1){$("#lvMsg").textContent="レベルは1つ以上選んでください。";return}
-    $("#lvMsg").textContent="";$("#lvDone").innerHTML="";lvDraft=on?lvDraft.filter(x=>x!==lv):lvDraft.concat(lv).sort();renderLevels()});
+    $("#lvMsg").textContent="";$("#lvDone").innerHTML="";lvDraft=on?lvDraft.filter(x=>x!==lv):lvSort(lvDraft.concat(lv));renderLevels()});
 }
 let lvDraft=null,thDraft=null;
 $("#lvDiag").onclick=()=>startDiag("panel");
@@ -1482,7 +1485,7 @@ function makeQ(w,words){
   const type=types[Math.floor(Math.random()*types.length)];
   // まちがいの選択肢は、品詞が同じで、レベルが近い（±1）単語から優先して選ぶ
   // 意味が同じ語（trainer と sweatshirt の「トレーナー」など）は、どの出し方でも正解が2つになるので選択肢に入れない
-  const near=x=>!w.lv||!x.lv||Math.abs(x.lv-w.lv)<=1,cand=words.filter(x=>x.id!==w.id&&x.ja!==w.ja&&x.w.toLowerCase()!==w.w.toLowerCase());
+  const near=x=>!w.lv||!x.lv||Math.abs(LV_RANK[x.lv]-LV_RANK[w.lv])<=1,cand=words.filter(x=>x.id!==w.id&&x.ja!==w.ja&&x.w.toLowerCase()!==w.w.toLowerCase());
   const same=shuffle(cand.filter(x=>x.pos===w.pos&&near(x))),other=shuffle(cand.filter(x=>!(x.pos===w.pos&&near(x))));
   const field=type==="en2ja"?"ja":"w";const seen=new Set([w[field]]);const ds=[];
   for(const x of same.concat(other)){if(ds.length>=3)break;if(!seen.has(x[field])){seen.add(x[field]);ds.push(x)}}
