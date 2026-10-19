@@ -974,8 +974,9 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(
 // queue の中身は単語id（英→日）か "r:"+単語id（日→英）
 let cram=false,queue=[],flipped=false,sessionTotal=0,sessionDone=0,cardEx=null,exBusy=false,exErr="",revTyped="",spokenQ=null,doFlip=()=>{};
 const isRev=q=>q.startsWith("r:"),wid=q=>isRev(q)?q.slice(2):q;
-/* 日→英カードのヒント（2026-10-19）：意味がまったく同じ語（十分な＝enough／sufficient など約500語）は、日本語だけでは答えが決まらないので、
-   最初の1文字と文字数を出す（s _ _ _ _ _ _ _ _ _）。熟語の空白・ハイフンはそのまま見せる */
+/* 日→英カードのヒント（2026-10-19）：どのカードにも、最初の1文字と文字数を出す（s _ _ _ _ _ _ _ _ _）。熟語の空白・ハイフンはそのまま見せる。
+   はじめは意味がまったく同じ語（十分な＝enough／sufficient など約500語）だけに出していたが、「ちぐはぐ」と言われて全部に。
+   sameJa は、書いた答えが同じ意味の別の語だったときに「○ 〜も同じ意味」と出すのに使う */
 let jaIdx=null;
 function sameJa(w){if(!jaIdx){jaIdx=new Map();allWords().forEach(x=>{const k=x.ja.trim();if(!jaIdx.has(k))jaIdx.set(k,[]);jaIdx.get(k).push(x)})}
   return (jaIdx.get(w.ja.trim())||[]).filter(x=>x.id!==w.id)}
@@ -1224,7 +1225,7 @@ function renderCards(){
   const pct=cram?(sessionTotal?Math.round(sessionDone/sessionTotal*100):0):ratioAvg();
   let inner;const syn=rev?sameJa(w):[];
   if(!flipped&&rev){
-    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span><div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div>${syn.length?`<div class="revhint" aria-label="ヒント：${esc(w.w[0])}で始まる${w.w.replace(/[^A-Za-z]/g,"").length}文字">ヒント：${esc(letterHint(w.w))}</div>`:""}${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
+    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span><div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div><div class="revhint" aria-label="ヒント：${esc(w.w[0])}で始まる${w.w.replace(/[^A-Za-z]/g,"").length}文字">ヒント：${esc(letterHint(w.w))}</div>${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
   }else if(!flipped){
     inner=`<span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span><div class="word">${esc(w.w)}</div>${ipaHtml(w)}<div style="margin-top:10px">${spk(w.w)}</div><div class="tapnote">タップで意味を見る</div>`;
   }else{
