@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.5fe39879.js" as="script">
+<link rel="preload" href="words.cb9320a1.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -325,6 +325,7 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .chip.weak{background:var(--bad-bg);color:var(--bad)}
 .ipa,.ipa-s{font-family:"Segoe UI","Noto Sans","Lucida Grande","Arial Unicode MS","Helvetica Neue",sans-serif;color:var(--muted);letter-spacing:.02em}
 .ipa{font-size:16px;margin-top:2px}
+.revhint{font-family:ui-monospace,Consolas,monospace;font-size:18px;letter-spacing:.06em;color:var(--accent);margin:-2px 0 8px}
 .ipa-s{font-size:12px;margin-left:6px;vertical-align:middle}
 .quickbar{display:flex;gap:8px;flex-wrap:wrap}
 /* ホーム画面に追加の案内（GitHub 版のスマホだけ） */
@@ -682,7 +683,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.5fe39879.js"></script>
+<script src="words.cb9320a1.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -693,7 +694,7 @@ const THEME_KEYS=Object.keys(THEMES);
 const LEVELS={5:{name:"入門",cefr:"A1",eiken:"英検5〜4級",toeic:"中学レベル",short:"入門"},1:{name:"基礎",cefr:"A1–A2",eiken:"英検3級〜準2級",toeic:"TOEIC 〜545",short:"基礎"},2:{name:"標準",cefr:"B1",eiken:"英検2級",toeic:"TOEIC 550〜",short:"2級"},3:{name:"応用",cefr:"B2",eiken:"英検準1級",toeic:"TOEIC 785〜",short:"準1級"},4:{name:"上級",cefr:"C1〜",eiken:"英検1級",toeic:"TOEIC 945〜",short:"1級"}};
 const LV_ORDER=[5,1,2,3,4],LV_RANK={5:0,1:1,2:2,3:3,4:4},LV_LIST=LV_ORDER.map(k=>[k,LEVELS[k]]),lvSort=a=>a.slice().sort((x,y)=>LV_RANK[x]-LV_RANK[y]);
 
-const POS_JA={verb:"動詞",noun:"名詞",adj:"形容詞",adv:"副詞",phrase:"熟語"};
+const POS_JA={verb:"動詞",noun:"名詞",adj:"形容詞",adv:"副詞",phrase:"熟語",prep:"前置詞"};
 const INTERVALS=[0,1,2,4,8,16,32];   // BOX 1〜6 の「次に出す日」までの日数（覚えた単語は、この日が来るまで出にくい）
 const ivl=b=>INTERVALS[b];
 const NEW_PER_DAY=8, MASTER=5, LS="tango-ring-v1";
@@ -973,6 +974,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(
 // queue の中身は単語id（英→日）か "r:"+単語id（日→英）
 let cram=false,queue=[],flipped=false,sessionTotal=0,sessionDone=0,cardEx=null,exBusy=false,exErr="",revTyped="",spokenQ=null,doFlip=()=>{};
 const isRev=q=>q.startsWith("r:"),wid=q=>isRev(q)?q.slice(2):q;
+/* 日→英カードのヒント（2026-10-19）：意味がまったく同じ語（十分な＝enough／sufficient など約500語）は、日本語だけでは答えが決まらないので、
+   最初の1文字と文字数を出す（s _ _ _ _ _ _ _ _ _）。熟語の空白・ハイフンはそのまま見せる */
+let jaIdx=null;
+function sameJa(w){if(!jaIdx){jaIdx=new Map();allWords().forEach(x=>{const k=x.ja.trim();if(!jaIdx.has(k))jaIdx.set(k,[]);jaIdx.get(k).push(x)})}
+  return (jaIdx.get(w.ja.trim())||[]).filter(x=>x.id!==w.id)}
+const letterHint=t=>t.split(" ").map(p=>p.split("").map((c,i)=>i===0&&p===t.split(" ")[0]?c:/[A-Za-z]/.test(c)?"_":c).join(" ")).join(" 　");
 const storeOf=q=>isRev(q)?state.rev:state.cards;
 // 英→日が REV_AT まで来た単語に、日→英カードを作る。一度に増えすぎないよう1日5枚ずつずらす
 function ensureRev(){const t=dayNum();let k=0;
@@ -1215,9 +1222,9 @@ function renderCards(){
   const e=cardEx.e,more=exList(w).length>1||!aiOff;
   // 棒：ふだんは平均の覚え具合、もう一度モードでは進み具合
   const pct=cram?(sessionTotal?Math.round(sessionDone/sessionTotal*100):0):ratioAvg();
-  let inner;
+  let inner;const syn=rev?sameJa(w):[];
   if(!flipped&&rev){
-    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span><div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div>${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
+    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span><div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div>${syn.length?`<div class="revhint" aria-label="ヒント：${esc(w.w[0])}で始まる${w.w.replace(/[^A-Za-z]/g,"").length}文字">ヒント：${esc(letterHint(w.w))}</div>`:""}${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
   }else if(!flipped){
     inner=`<span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span><div class="word">${esc(w.w)}</div>${ipaHtml(w)}<div style="margin-top:10px">${spk(w.w)}</div><div class="tapnote">タップで意味を見る</div>`;
   }else{
@@ -1230,7 +1237,9 @@ function renderCards(){
   // 日→英：書いて確かめる（任意）。めくったら、書いた答えが合っていたかを出す
   const norm=x=>String(x).trim().toLowerCase().replace(/[.,!?'’]/g,"").replace(/\s+/g," ");
   const typed=rev&&!flipped?`<input type="text" id="revIn" value="${esc(revTyped)}" placeholder="英語を書いてみる（任意・Enterでめくる）" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="英語を書く">`
-    :rev&&revTyped.trim()?`<div class="verdict ${norm(revTyped)===norm(w.w)?"ok":"ng"}">${norm(revTyped)===norm(w.w)?"✓ 書いた答えは合っています":"書いた答え："+esc(revTyped)}</div>`:"";
+    :rev&&revTyped.trim()?(norm(revTyped)===norm(w.w)?`<div class="verdict ok">✓ 書いた答えは合っています</div>`
+      :syn.some(x=>norm(x.w)===norm(revTyped))?`<div class="verdict ok">○ ${esc(revTyped)} も同じ意味です。このカードは ${esc(w.w)}</div>`
+      :`<div class="verdict ng">書いた答え：${esc(revTyped)}</div>`):"";
   area.innerHTML=`${goalHtml()}${unlockHtml()}<div>${qt?qtBarHtml():""}${cram?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">もう一度モード（覚え具合は変わりません）</span><button class="linkbtn" id="cramStop">やめる</button></div>`:""}${!cram&&!qt?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">苦手ほど多く出ます ・ 新しい単語 ${NEW_MIX[newMix()].name}</span><button class="linkbtn" id="ratioAdd">新しい単語を${npd()}語足す</button></div>${ratioMsg?`<div class="note" style="color:var(--good);margin-bottom:6px">${esc(ratioMsg)}</div>`:""}`:""}<div class="progress"><span>${cram?`もう一度 <b>${queue.length}</b>`:`出題中 <b>${ratioWords().length+ratioFresh.length}</b>語 ・ 平均の覚え具合 <b>${ratioAvg()}</b>%`}</span><span>${rev?"日→英 ・ ":""}${c?"覚え具合 "+Math.round(mNow(c)*100)+"%":"はじめて"}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
     <div class="icard fade" id="icard" role="button" tabindex="0" aria-label="カードをめくる"><span class="hole"></span><span class="cmeta">${dotsHtml(box)}</span>${inner}</div>
     ${typed}${flipped?nuanceHtml(w):""}
@@ -1375,7 +1384,7 @@ $("#lvApply").onclick=()=>{
   $("#lvDone").innerHTML=`✓「${esc(names)}」に更新しました。`+(newCnt?`次の新しいカード ${newCnt}枚は、ここから出ます。`
     :left?"":"この範囲の単語は、すべて学習を始めています。");
 };
-function addWords(list){
+function addWords(list){jaIdx=null;
   const have=new Set(allWords().map(w=>w.w.toLowerCase()));let n=0;
   list.forEach((x,i)=>{if(!x||typeof x.w!=="string"||typeof x.ja!=="string")return;const k=x.w.trim().toLowerCase();if(!k||have.has(k))return;have.add(k);
     state.custom.push({id:"c"+Date.now().toString(36)+i,w:x.w.trim().slice(0,60),pos:POS_JA[x.pos]?x.pos:"phrase",ja:String(x.ja).slice(0,60),ex:String(x.ex||"").slice(0,200),exJa:String(x.exJa||"").slice(0,200),lv:LEVELS[x.lv]?x.lv:0});n++});
