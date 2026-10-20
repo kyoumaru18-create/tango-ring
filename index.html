@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.cb9320a1.js" as="script">
+<link rel="preload" href="words.5b39baca.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -438,6 +438,7 @@ details.flash{animation:flash 1.2s ease}
 
   <!-- CARDS -->
   <section id="tab-cards" class="tabpane" style="display:flex;flex-direction:column;gap:14px">
+    <div class="pwabar" id="loginBar" hidden></div>
     <div class="pwabar" id="pwaBar" hidden></div>
     <div class="quickbar" id="quickbar"></div>
     <div id="cardArea" style="display:flex;flex-direction:column;gap:12px"></div>
@@ -697,7 +698,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.cb9320a1.js"></script>
+<script src="words.5b39baca.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -789,6 +790,7 @@ const SB_URL="https://lokbaszrekbnxpbviaja.supabase.co",SB_KEY="sb_publishable_q
 const SB_JS="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js";
 const CAN_CLOUD=!ON_CLAUDE&&/^https:|^http:\/\/localhost/.test(location.href);
 let sb=null,sbUser=null,acctMsg="",acctBusy=false;
+var cloudChecked=false;   // ログインしているかを確かめ終わったか（終わる前に「ログインしませんか」を出さないため）
 // 2つの進み具合を合わせる：単語ごとに、あとで答えたほう（同じ日なら回数の多いほう）を残す。日ごとの枚数は多いほう。設定は新しいほう
 function mergeState(a,b){
   const nw=(a.updated||0)>=(b.updated||0)?a:b,od=nw===a?b:a;
@@ -810,7 +812,7 @@ async function initCloud(){
   try{const {data}=await sb.auth.getSession();if(data&&data.session&&!sbUser){sbUser=data.session.user;cloudSync()}}catch(e){}
   // ログインから戻ってきたときの ?code=… をアドレスから消す
   if(/[?&]code=/.test(location.search))try{history.replaceState(null,"",location.pathname)}catch(e){}
-  renderAcct();
+  cloudChecked=true;renderAcct();
 }
 async function cloudSync(){
   if(!sb||!sbUser)return;setSync("同期中…");
@@ -822,7 +824,7 @@ async function cloudSync(){
   }catch(e){setSync("保存待ち…");acctMsg="アカウントとの同期に失敗しました。少し待って開き直してください。";renderAcct()}
 }
 function renderAcct(){
-  if(typeof renderAvatar==="function")renderAvatar();
+  if(typeof renderAvatar==="function")renderAvatar();if(typeof renderPwaBar==="function")renderPwaBar();
   const g=$("#acctGroup");if(!g)return;
   if(ON_CLAUDE){g.hidden=false;   // claude.ai 版：claude.ai のアカウントに保存している（名前は claude.ai の画面右下などで確認）
     const ok=syncState==="アカウントに保存済み";
@@ -3067,7 +3069,25 @@ async function doInstall(){if(!installEvt)return;installEvt.prompt();let ok=fals
   installEvt=null;logEvent("feature","ホーム画面に追加:"+(ok?"追加":"やめた"));renderPwa()}
 $("#pwaBtn").onclick=doInstall;
 /* カードの上の案内：スマホで、ホーム画面から開いていない人に出す（「あとで」は3日、「もう出さない」はずっと隠す） */
+/* 記録を守るためのログインのすすめ（2026-10-20）：iPhone の Safari は、7日間開かないサイトの保存を消すことがある（ホーム画面から開く場合は消えにくい）。
+   ログインしていない人が合計50枚答えたら、カードの上に1つだけ出す。「あとで」は7日、「もう出さない」はずっと（localStorage -loginhide）。
+   ホーム画面の案内とは同時に出さない（こちらを先に） */
+function renderLoginBar(){const el=$("#loginBar");if(!el)return false;
+  let hide=0;try{hide=+localStorage.getItem(LS+"-loginhide")||0}catch(e){}
+  const total=Object.values(state.days||{}).reduce((a,n)=>a+(n||0),0);
+  const show=!ON_CLAUDE&&CAN_CLOUD&&cloudChecked&&!!sb&&!sbUser&&helloDone&&!diag&&total>=50&&Date.now()>hide;
+  el.hidden=!show;if(!show)return false;
+  const ios=isIOS()&&!isStandalone();
+  el.innerHTML=`<div class="pwatxt"><b>記録を守るために、ログインしておきませんか？</b><small>${ios?"iPhone の Safari では、7日ほど開かないと、この端末の記録が消えてしまうことがあります。":"今の記録は、この端末の中だけに保存しています。"}Googleでログインしておくと、記録がアカウントに残り、ほかの端末でも続きができます（無料）。</small></div>
+    <div class="row"><button class="btn primary" type="button" id="loginGo">ログインする</button><button class="linkbtn" type="button" id="loginLater">あとで</button><button class="linkbtn" type="button" id="loginNever">もう出さない</button></div>`;
+  const hideFor=v=>{try{localStorage.setItem(LS+"-loginhide",String(v))}catch(e){}renderPwaBar()};
+  $("#loginGo").onclick=()=>{logEvent("feature","ログインのすすめ:開く",true);openPanel("setBox")};
+  $("#loginLater").onclick=()=>hideFor(Date.now()+7*864e5);
+  $("#loginNever").onclick=()=>hideFor(9e15);
+  return true;
+}
 function renderPwaBar(){const el=$("#pwaBar");if(!el)return;
+  if(renderLoginBar()){el.hidden=true;return}
   let hide=0;try{hide=+localStorage.getItem(LS+"-pwahide")||0}catch(e){}
   const show=!ON_CLAUDE&&CAN_CLOUD&&isPhone()&&!isStandalone()&&helloDone&&!diag&&Date.now()>hide;
   el.hidden=!show;if(!show)return;
