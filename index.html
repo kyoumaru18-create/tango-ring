@@ -150,6 +150,10 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .dots i.on{background:var(--accent)}
 .word{font-family:var(--f-display);font-size:clamp(42px,12vw,62px);line-height:1.05;margin:14px 0 6px;overflow-wrap:anywhere}
 .pos{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.aifeat{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.aifeat li{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.6;border-left:3px solid var(--accent);padding-left:10px}
+.aifeat li span{color:var(--muted);font-size:13px}
+.lvchip{display:inline-block;font-family:var(--f-body);font-size:11px;line-height:1.6;padding:0 8px;border-radius:999px;background:var(--paper);color:var(--muted);margin-left:6px;vertical-align:1px;white-space:nowrap}
 .tapnote{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-size:12px;color:var(--muted)}
 .ja{font-size:24px;font-weight:700;margin:6px 0 14px}
 .ex{font-family:var(--f-display);font-size:22px;line-height:1.45}
@@ -500,6 +504,10 @@ details.flash{animation:flash 1.2s ease}
           <div class="sethead">パソコンのキー操作</div>
           <div class="note">スペースキーでめくる ・ ←（1）浮かばなかった ・ →（2）浮かんだ</div>
         </div>
+        <div class="setgroup" id="aiGroup" hidden>
+          <div class="sethead">AIの機能（準備中）</div>
+          <div id="aiFeat" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
         <div class="setgroup" id="pwaGroup" hidden>
           <div class="sethead">ホーム画面に追加</div>
           <div class="note">スマホのホーム画面に置くと、アプリのようにアイコンから開けます。一度開いたあとは、電波がなくても使えます。</div>
@@ -715,6 +723,8 @@ const ipaOf=w=>(typeof IPA!=="undefined"&&IPA[String(w.w).toLowerCase()])||"";
 const ipaHtml=w=>{const p=state.showIpa===false?"":ipaOf(w);return p?`<div class="ipa">/${esc(p)}/</div>`:""};
 // claude.ai の外（GitHub Pages など、アカウントなしで開けるページ）では、AIと保存の機能はない。AIは claude.ai 版を案内する
 const ON_CLAUDE=!!(window.claude&&window.claude.use);
+// カードに出す単語のレベル（2026-10-20）。自分で追加した単語（レベルなし）には出さない
+const lvChip=w=>LEVELS[w.lv]?`<span class="lvchip">${LEVELS[w.lv].name} ・ ${esc(LEVELS[w.lv].eiken)}</span>`:"";
 const CLAUDE_URL="https://claude.ai/artifact/51EogZ8vLgHPKMsoATQ2cK";
 const AI_OFF=ON_CLAUDE?"AI機能は、claude.ai にログインして開くと使えます。":"AI機能は claude.ai 版で使えます（claude.ai のアカウントが必要です）。";
 const AI_LINK=`<a href="${CLAUDE_URL}" target="_blank" rel="noopener" style="color:var(--accent)">claude.ai 版を開く</a>`;
@@ -1231,11 +1241,11 @@ function renderCards(){
   const pct=cram?(sessionTotal?Math.round(sessionDone/sessionTotal*100):0):ratioAvg();
   let inner;const syn=rev?sameJa(w):[];
   if(!flipped&&rev){
-    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span><div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div><div class="revhint" aria-label="ヒント：${esc(w.w[0])}で始まる${w.w.replace(/[^A-Za-z]/g,"").length}文字">ヒント：${esc(letterHint(w.w))}</div>${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
+    inner=`<span class="pos" style="color:var(--accent)">日本語 → 英語 ・ ${POS_JA[w.pos]||esc(w.pos)}</span>${lvChip(w)}<div class="ja" style="font-size:clamp(22px,6vw,28px);margin:14px 0 8px">${esc(w.ja)}</div><div class="revhint" aria-label="ヒント：${esc(w.w[0])}で始まる${w.w.replace(/[^A-Za-z]/g,"").length}文字">ヒント：${esc(letterHint(w.w))}</div>${e.exJa?`<div class="exja">${esc(e.exJa)}</div>`:""}<div class="tapnote">英語で言ってみてから、タップ</div>`;
   }else if(!flipped){
-    inner=`<span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span><div class="word">${esc(w.w)}</div>${ipaHtml(w)}<div style="margin-top:10px">${spk(w.w)}</div><div class="tapnote">タップで意味を見る</div>`;
+    inner=`<div><span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span>${lvChip(w)}</div><div class="word">${esc(w.w)}</div>${ipaHtml(w)}<div style="margin-top:10px">${spk(w.w)}</div><div class="tapnote">タップで意味を見る</div>`;
   }else{
-    inner=`<div class="row" style="flex-wrap:nowrap;justify-content:space-between;align-items:flex-start"><div style="min-width:0"><span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span><div class="word" style="font-size:clamp(30px,8vw,40px);margin:6px 0 0">${esc(w.w)}</div>${ipaHtml(w)}</div>${spk(w.w)}</div>
+    inner=`<div class="row" style="flex-wrap:nowrap;justify-content:space-between;align-items:flex-start"><div style="min-width:0"><span class="pos">${POS_JA[w.pos]||esc(w.pos)}</span>${lvChip(w)}<div class="word" style="font-size:clamp(30px,8vw,40px);margin:6px 0 0">${esc(w.w)}</div>${ipaHtml(w)}</div>${spk(w.w)}</div>
       <div class="ja">${esc(w.ja)}</div>${e.ex?`<div class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:10px"><div style="min-width:0"><div class="ex">${markEx(w,e.ex)}</div><div class="exja">${esc(e.exJa)}</div></div>${spk(e.ex)}</div>`:""}
       ${more?`<button class="linkbtn" id="exBtn" style="align-self:flex-start" ${exBusy?"disabled":""}>${exBusy?"例文を作っています…":"別の例文"}</button>`:""}${exErr?`<div class="err">${esc(exErr)}</div>`:""}${repFoot("card")}`;
   }
@@ -3012,10 +3022,21 @@ $("#setApply").onclick=applyCardSettings;
 // 画面を閉じた・アプリを切り替えたときも、時間を止める
 document.addEventListener("visibilitychange",()=>{if(document.hidden){if(qTimer)pauseQuiz();if(qt&&qtPause===null)pauseQt()}});
 // claude.ai の外：AI英会話は始められないので、説明と claude.ai 版への案内だけ出す
+/* AIでできること（2026-10-20）：「AIでこんなことができるようになる、というのは知ってほしい」と言われて、GitHub 版の AI英会話タブと設定に出す。
+   値段の話はまだしない（アンケートの案は CLAUDE.md の「値段」に保留中） */
+function aiFeatHtml(talk){
+  const f=[["AI英会話","カフェ・空港・職場などの場面で、AIと英語で会話。まずよかったところをほめて、直すのは一番大事な1点だけ。言えなかった表現は、そのままカードにできます。"],
+    ["ニュアンス","カードの単語の「核のイメージ」や、似た単語との違いを説明します。"],
+    ["使い分け","「借りる」など18語のほかにも、どんな日本語でも英語での言い分けを調べられます。"],
+    ["文法の質問","ここに載っていない文法も、ポイント・間違えやすい使い方・確認クイズの形で説明します。"],
+    ["例文・単語づくり","カードの例文を増やしたり、好きなテーマで単語カードを作ったりできます。"]];
+  return `<div><b>${talk?"AI英会話などのAI機能は、このページでも使えるように準備中です":"AIを使った機能を準備中です"}</b></div>
+    <ul class="aifeat">${f.map(([t,d])=>`<li><b>${t}</b><span>${d}</span></li>`).join("")}</ul>
+    <div class="note" style="margin:0">今は claude.ai 版（claude.ai のアカウントが必要。無料で作れます）で試せます。${AI_LINK}</div>
+    <div class="note" style="font-size:12px;margin:0">claude.ai 版の進み具合は、このページとは別に保存されます。</div>`}
 if(!ON_CLAUDE){$("#talkSetup").hidden=true;$("#talkOff").hidden=false;
-  $("#talkOff").innerHTML=`<div class="label">AI英会話</div><div><b>AI英会話は claude.ai 版で使えます</b></div>
-    <div class="note">AIが相手役になって、カフェ・空港・職場などの場面で英語の会話を練習できます。あなたの英文を毎回やさしく添削し、言えなかった表現はカードに追加できます。使うには claude.ai のアカウント（無料で作れます）が必要です。</div>
-    <div>${AI_LINK}</div><div class="note" style="font-size:12px">claude.ai 版の進み具合は、このページとは別に保存されます。</div>`}
+  $("#talkOff").innerHTML=`<div class="label">AI英会話</div>${aiFeatHtml(true)}`;
+  $("#aiGroup").hidden=false;$("#aiFeat").innerHTML=aiFeatHtml(false)}
 /* ---------- ホーム画面に追加（GitHub Pages 版だけ） ----------
    manifest.json・sw.js・アイコンは「公開用」フォルダにあり、index.html といっしょに GitHub に上げる。
    claude.ai の中では使わない（ファイルがないため） */
