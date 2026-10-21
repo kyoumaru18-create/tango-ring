@@ -207,6 +207,9 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .qbig{font-family:var(--f-display);font-size:40px;line-height:1.1;overflow-wrap:anywhere}
 .qbig.jp{font-family:var(--f-body);font-size:26px;font-weight:700}
 .qbig.sent{font-size:24px;line-height:1.45}
+.qfill{border-bottom:2px solid currentColor;padding:0 2px}
+.qfill.ok{color:var(--good)}
+.qfill.ng{color:var(--bad)}
 .blank{display:inline-block;min-width:4.5em;border-bottom:2px solid var(--ink);text-align:center;font-family:var(--f-mono);font-size:.7em;letter-spacing:.15em;color:var(--muted)}
 .opts{display:grid;gap:8px}
 .opt{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:12px 14px;min-height:48px;display:flex;justify-content:space-between;gap:8px}
@@ -1642,7 +1645,10 @@ function renderQuiz(){
   let prompt,big;
   if(q.type==="en2ja"){prompt="この単語の意味は？";big=`<div class="row" style="flex-wrap:nowrap;justify-content:space-between"><div style="min-width:0"><div class="qbig">${esc(w.w)}</div>${ipaHtml(w)}</div>${spk(w.w)}</div>`}
   else if(q.type==="ja2en"){prompt="英語で言うと？";big=`<div class="qbig jp">${esc(w.ja)}</div>`}
-  else{prompt="空欄に入るのは？";big=`<div class="qbig sent">${esc(q.e.ex).replace(wordRe(w),'<span class="blank">?</span>')}</div><div class="note">${esc(q.e.exJa)}</div>`}
+  // 穴埋め：答えたら「?」のところに単語を入れて、文を読み上げられるようにする（2026-10-21。前は下にもう一度同じ例文を出していた）
+  else{prompt="空欄に入るのは？";const okq=q.pick===w.id;
+    big=ans?`<div class="row" style="flex-wrap:nowrap;justify-content:space-between;align-items:flex-start;gap:10px"><div class="qbig sent" style="min-width:0">${esc(q.e.ex).replace(wordRe(w),m=>`<span class="qfill ${okq?"ok":"ng"}">${m}</span>`)}</div>${spk(q.e.ex)}</div><div class="note">${esc(q.e.exJa)}</div>`
+      :`<div class="qbig sent">${esc(q.e.ex).replace(wordRe(w),'<span class="blank">?</span>')}</div><div class="note">${esc(q.e.exJa)}</div>`}
   const isEn=q.type!=="en2ja",dk=q.pick==="?";
   const sp=quiz.mode==="speed";
   // 答えたあと（スピード以外）：選択肢の中に、それぞれが何だったかを出す（2026-10-20。前は下の「ほかの選択肢」に出していて、画面の移動が多かった）
@@ -1672,7 +1678,7 @@ function renderQuiz(){
     <div class="opts">${q.opts.map(optHtml).join("")}</div>
     ${ans?"":`<button class="btn primary qskip" id="qDk" type="button">この問題を飛ばす</button>`}
     ${ans&&sp?`<div class="verdict ${q.pick===w.id?"ok":"ng"}">${q.pick===w.id?"正解":q.timeout?"時間切れ":dk?"飛ばした問題":"不正解"}${q.ms&&q.pick===w.id?` <span style="font-weight:400">${(q.ms/1000).toFixed(1)}秒</span>`:""}　<span style="font-weight:400">${esc(w.w)} ＝ ${esc(w.ja)}</span></div>`:""}
-    ${ans&&!sp?`<div class="explain"><div><div class="verdict ${q.pick===w.id?"ok":"ng"}">${q.pick===w.id?"正解":q.timeout?"時間切れ":dk?"飛ばした問題":"不正解"}${sp&&q.ms&&q.pick===w.id?` <span style="font-weight:400">${(q.ms/1000).toFixed(1)}秒</span>`:""}　<span style="font-weight:400">${esc(w.w)} ＝ ${esc(w.ja)}</span></div>${q.e.ex?`<div class="ex" style="font-size:19px">${markEx(w,q.e.ex)}</div><div class="exja">${esc(q.e.exJa)}</div>`:""}</div>${q.e.ex?spk(q.e.ex):""}</div>
+    ${ans&&!sp?`<div class="explain"><div><div class="verdict ${q.pick===w.id?"ok":"ng"}">${q.pick===w.id?"正解":q.timeout?"時間切れ":dk?"飛ばした問題":"不正解"}${sp&&q.ms&&q.pick===w.id?` <span style="font-weight:400">${(q.ms/1000).toFixed(1)}秒</span>`:""}　<span style="font-weight:400">${esc(w.w)} ＝ ${esc(w.ja)}</span></div>${q.e.ex&&q.type!=="cloze"?`<div class="ex" style="font-size:19px">${markEx(w,q.e.ex)}</div><div class="exja">${esc(q.e.exJa)}</div>`:""}</div>${q.e.ex&&q.type!=="cloze"?spk(q.e.ex):""}</div>
       <div class="others">${repFoot("quiz")}</div>
       <button class="btn primary" id="qNext">${quiz.i+1<quiz.qs.length?"次へ":"結果を見る"}</button>`:""}`;
   if($("#qMode"))bindQuizMode();
