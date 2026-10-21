@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.ef8268ec.js" as="script">
+<link rel="preload" href="words.76fb74ad.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -592,6 +592,16 @@ details.flash{animation:flash 1.2s ease}
         <div id="addMsg" class="note"></div>
       </div>
     </details>
+    <details id="reqBox" class="addbox">
+      <summary><span class="sumtxt"><b>単語のリクエスト</b><small>入れてほしい単語を作った人に送る</small></span></summary>
+      <div class="inner">
+        <div class="note" style="margin:0">アプリに入れてほしい単語を送ってください。作った人が意味・例文・発音記号をつけて点検してから、みんなのカードに入れます（少し時間がかかります）。自分のカードにすぐ入れたいときは「＋ 単語を追加」から。</div>
+        <input type="text" id="reqW" placeholder="英単語・フレーズ（例：artifact）" maxlength="60" aria-label="入れてほしい英単語" autocapitalize="off" spellcheck="false">
+        <input type="text" id="reqNote" placeholder="意味や、どこで見たか（なくてもOK）" maxlength="300" aria-label="意味やどこで見たか">
+        <button class="btn primary" id="reqSend" type="button" style="align-self:flex-start">リクエストする</button>
+        <div class="note" id="reqMsg" role="status" style="margin:0"></div>
+      </div>
+    </details>
     <details id="listBox" open>
       <summary>単語一覧</summary>
       <div class="inner">
@@ -716,7 +726,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.ef8268ec.js"></script>
+<script src="words.76fb74ad.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -1388,7 +1398,13 @@ function renderList(){
   const ws=(listMode==="weak"?weak:listMode==="mastered"?mastered:listMode==="used"?used:allWords()).filter(w=>!th||w.cat===th);
   $("#listMode").innerHTML=[["all","すべて"],["weak",`苦手（${weak.length}）`],["mastered",`定着（${mastered.length}）`]].concat(ON_CLAUDE||used.length?[["used",`会話で使えた（${used.length}）`]]:[]).map(([k,l])=>`<button data-m="${k}" aria-pressed="${listMode===k}">${l}</button>`).join("");
   $("#listMode").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{listMode=b.dataset.m;renderList()});
-  $("#wlist").innerHTML=ws.filter(w=>!q||w.w.toLowerCase().includes(q)||w.ja.includes(q)).map(w=>`<div class="wrow"><div class="w">${esc(w.w)}${state.showIpa!==false&&ipaOf(w)?`<span class="ipa-s">/${esc(ipaOf(w))}/</span>`:""}<span class="chip">${w.lv?LEVELS[w.lv].short:"追加"}</span>${lapsesOf(w)>=2?'<span class="chip weak">苦手</span>':""}${ut[w.id]?`<span class="chip used">💬 使えた${ut[w.id]>1?"×"+ut[w.id]:""}</span>`:""}</div>${dotsHtml(boxOf(w))}<div class="j">${esc(w.ja)}</div></div>`).join("")||'<div class="note" style="padding:10px 0">見つかりません</div>';
+  const shown=ws.filter(w=>!q||w.w.toLowerCase().includes(q)||w.ja.includes(q));
+  // 英語で検索して1語も見つからないときは、リクエストへ案内する
+  if(q&&!shown.length&&/^[a-z][a-z' -]*$/i.test(q)&&!listMode.match(/weak|mastered|used/)&&!th){
+    $("#wlist").innerHTML=`<div class="note" style="padding:10px 0">「${esc(q)}」は入っていません。<button class="linkbtn" type="button" id="reqFromList">この単語をリクエストする</button></div>`;
+    $("#reqFromList").onclick=()=>{$("#reqBox").open=true;$("#reqW").value=$("#listQ").value.trim();$("#reqMsg").textContent="";$("#reqBox").scrollIntoView({behavior:"smooth",block:"start"});$("#reqNote").focus()};
+    return}
+  $("#wlist").innerHTML=shown.map(w=>`<div class="wrow"><div class="w">${esc(w.w)}${state.showIpa!==false&&ipaOf(w)?`<span class="ipa-s">/${esc(ipaOf(w))}/</span>`:""}<span class="chip">${w.lv?LEVELS[w.lv].short:"追加"}</span>${lapsesOf(w)>=2?'<span class="chip weak">苦手</span>':""}${ut[w.id]?`<span class="chip used">💬 使えた${ut[w.id]>1?"×"+ut[w.id]:""}</span>`:""}</div>${dotsHtml(boxOf(w))}<div class="j">${esc(w.ja)}</div></div>`).join("")||'<div class="note" style="padding:10px 0">見つかりません</div>';
 }
 function renderLevels(){
   const ws=allWords();
@@ -2834,7 +2850,7 @@ const REP_REASONS={
   ai:["説明がまちがっている","英語が不自然","訳がちがう","その他"],
   gram:["説明がまちがっている","例文が不自然","クイズの答え","その他"],
   talk:["添削がまちがっている","英語が不自然","訳がちがう","その他"]};
-const KIND_JA={card:"単語カード",nu:"ニュアンス（AI）",quiz:"クイズ",listen:"リスニング",diff:"使い分け",gram:"文法",talk:"AI英会話",feedback:"感想・要望"};
+const KIND_JA={card:"単語カード",nu:"ニュアンス（AI）",quiz:"クイズ",listen:"リスニング",diff:"使い分け",gram:"文法",talk:"AI英会話",feedback:"感想・要望",wordreq:"単語のリクエスト"};
 const clip=(s,n)=>String(s??"").slice(0,n);
 const repFoot=t=>`<button class="linkbtn replink" type="button" data-rep="${t}">間違いを報告</button>`;
 // 報告ボタンごとに、何を報告するか（画面に出ている内容）をまとめる
@@ -2882,7 +2898,7 @@ function openReport(o){
 function closeReport(){const d=$("#repDlg");try{d.close()}catch(e){d.removeAttribute("open")}}
 // 送れなかったとき、作った人に送ってもらう文
 function repPlain(it){
-  const lines=[`【単語リング】${it.kind==="feedback"?"感想・要望":"間違いの報告"}`];
+  const lines=[`【単語リング】${it.kind==="feedback"?"感想・要望":it.kind==="wordreq"?"単語のリクエスト":"間違いの報告"}`];
   if(it.kind!=="feedback")lines.push("対象："+it.what);if(it.reason)lines.push("どこ："+it.reason);if(it.text)lines.push((it.kind==="feedback"?"":"くわしく：")+it.text);
   const LBL={ex:"例文",exJa:"例文の訳",ai:"AIの英文",me:"自分の英文",better:"AIの添削",feedback:"AIの説明",scene:"場面"};   // 長くならないよう、大事なものだけ
   Object.entries(it.ctx||{}).forEach(([k,v])=>{if(LBL[k]&&v!=="")lines.push(`${LBL[k]}：${v}`)});
@@ -2904,13 +2920,7 @@ async function sendReport(){
   const ctx={};Object.entries(repCur.ctx||{}).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=="")ctx[k]=clip(v,400)});
   const it={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),kind:repCur.kind,what:clip(repCur.what,200),reason:repReason,text:clip(text,1000),ctx};
   repBusy=true;const s=$("#repSend");s.disabled=true;s.textContent="送っています…";$("#repMsg").textContent="";
-  let r=null,ok=false;
-  if(!ON_CLAUDE&&sb){   // GitHub 版：Supabase の reports 表に送る（ログインしていなくても送れる。読めるのは作った人だけ）
-    for(let k=0;k<2&&!ok;k++){try{const {error}=await sb.from("reports").insert({kind:it.kind,what:it.what||null,reason:it.reason||null,body:it.text||null,ctx:it.ctx});
-      if(!error)ok=true;else break}catch(e){await new Promise(x=>setTimeout(x,600+Math.random()*600))}}
-  }else if((r=await repCtx())&&r.uid&&r.can!==false){
-    for(let k=0;k<2&&!ok;k++){try{await repWrite(r,it);ok=true}catch(e){if(!e||e.code!=="unavailable")break;await new Promise(x=>setTimeout(x,600+Math.random()*600))}}
-  }
+  const {ok,r}=await deliverReport(it);
   repBusy=false;s.disabled=false;
   if(ok){$("#repMsg").innerHTML='<span class="repok">✓ 送りました。ありがとうございます！</span>';s.textContent="閉じる";s.onclick=closeReport;
     if(cloudOwner||(r&&r.owner))loadReports();return}
@@ -2918,6 +2928,33 @@ async function sendReport(){
   s.hidden=true;$("#repCopy").value=repPlain(it);$("#repCopyBox").hidden=false;
   $("#repMsg").textContent=(ON_CLAUDE?"この画面からは送れませんでした（リンクで開いているときなど）。":"送れませんでした（電波がないときなど）。")+"下の文をコピーして、作った人に LINE などで送ってください。";
 }
+// 報告・感想・単語のリクエストを送る（GitHub 版は Supabase の reports、claude.ai 版は db の reports/<id>）
+async function deliverReport(it){
+  let r=null,ok=false;
+  if(!ON_CLAUDE&&sb){   // GitHub 版：Supabase の reports 表に送る（ログインしていなくても送れる。読めるのは作った人だけ）
+    for(let k=0;k<2&&!ok;k++){try{const {error}=await sb.from("reports").insert({kind:it.kind,what:it.what||null,reason:it.reason||null,body:it.text||null,ctx:it.ctx});
+      if(!error)ok=true;else break}catch(e){await new Promise(x=>setTimeout(x,600+Math.random()*600))}}
+  }else if((r=await repCtx())&&r.uid&&r.can!==false){
+    for(let k=0;k<2&&!ok;k++){try{await repWrite(r,it);ok=true}catch(e){if(!e||e.code!=="unavailable")break;await new Promise(x=>setTimeout(x,600+Math.random()*600))}}
+  }
+  return {ok,r};
+}
+/* 単語のリクエスト（2026-10-22。「みんなの辞書みたいな機能があったら」と言われて、まずは品質を守れる「リクエスト」の形にした）：
+   使う人が入れてほしい単語を送る → 作った人の「届いた報告・感想」に kind "wordreq" で届く（多い順のまとめも出る）→ Claude が点検して BASE の最後に足す */
+let reqBusy=false;
+$("#reqSend").onclick=async()=>{if(reqBusy)return;
+  const w=$("#reqW").value.trim().replace(/\s+/g," "),note=$("#reqNote").value.trim(),msg=$("#reqMsg");
+  if(!w){msg.textContent="英単語を書いてください。";$("#reqW").focus();return}
+  if(!/^[A-Za-z][A-Za-z' .-]*$/.test(w)){msg.textContent="英語（アルファベット）で書いてください。";$("#reqW").focus();return}
+  const have=allWords().find(x=>x.w.toLowerCase()===w.toLowerCase());
+  if(have){msg.innerHTML=`「${esc(have.w)}」（${esc(have.ja)}）は、もう入っています。`;return}
+  reqBusy=true;const b=$("#reqSend");b.disabled=true;b.textContent="送っています…";msg.textContent="";
+  const it={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),at:Date.now(),kind:"wordreq",what:clip(w,60),reason:"",text:clip(note,300),ctx:{}};
+  const {ok,r}=await deliverReport(it);reqBusy=false;b.disabled=false;b.textContent="リクエストする";
+  if(ok){msg.innerHTML=`<span class="repok">✓ 「${esc(w)}」をリクエストしました。ありがとうございます！</span>`;$("#reqW").value="";$("#reqNote").value="";
+    logEvent("feature","単語のリクエスト");if(cloudOwner||(r&&r.owner))loadReports();return}
+  msg.textContent=`送れませんでした（電波がないときなど）。作った人に「${w}」を入れてほしいと伝えてください。`;
+};
 $("#repSend").onclick=sendReport;
 $("#repDlg").addEventListener("close",()=>{$("#repSend").onclick=sendReport});
 $("#repClose").onclick=closeReport;
@@ -3029,7 +3066,10 @@ function renderReports(){
   $("#repMode").innerHTML=[["open",`未対応（${open.length}）`],["all",`すべて（${all.length}）`]].map(([k,l])=>`<button data-m="${k}" aria-pressed="${repShow===k}">${l}</button>`).join("");
   $("#repMode").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{repShow=b.dataset.m;renderReports()});
   const list=repShow==="open"?open:all,fmt=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,"0")}`};
-  $("#repList").innerHTML=evHtml()+(repErr?`<div class="err">${esc(repErr)}</div>`:"")+(list.map(x=>`<div class="rpitem${repDone[x.key]?" done":""}">
+  // 単語のリクエスト（未対応）を、多い順にまとめて出す
+  const rq={};open.filter(x=>x.kind==="wordreq").forEach(x=>{const k=String(x.what||"").toLowerCase();if(k)rq[k]=(rq[k]||0)+1});
+  const rqHtml=Object.keys(rq).length?`<div class="evsum"><div class="label">単語のリクエスト（未対応）</div><div>${Object.entries(rq).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${esc(k)}${n>1?` ×${n}`:""}`).join(" ・ ")}</div><div class="note" style="margin:0">Claude に「届いた単語のリクエストを足して」と頼むと、点検してから全員のカードに入れます。</div></div>`:"";
+  $("#repList").innerHTML=evHtml()+rqHtml+(repErr?`<div class="err">${esc(repErr)}</div>`:"")+(list.map(x=>`<div class="rpitem${repDone[x.key]?" done":""}">
       <div class="rphead"><span>${fmt(x.at||0)}</span><span>${esc(x.who)}</span><span class="chip" style="margin:0">${esc(KIND_JA[x.kind]||x.kind)}</span>${x.reason?`<span class="chip weak" style="margin:0">${esc(x.reason)}</span>`:""}</div>
       ${x.kind!=="feedback"?`<b>${esc(x.what)}</b>`:""}${x.text?`<div>${esc(x.text)}</div>`:""}
       ${Object.keys(x.ctx||{}).length?`<pre>${esc(Object.entries(x.ctx).map(([k,v])=>k+"："+v).join("\n"))}</pre>`:""}
