@@ -540,6 +540,12 @@ details.flash{animation:flash 1.2s ease}
             <div class="row"><button class="btn danger" id="bkResetYes" type="button">消す</button><button class="btn" id="bkResetNo" type="button">やめる</button></div></div>
         </div>
         <div class="setgroup">
+          <div class="sethead">友達に教える</div>
+          <div class="note">登録しなくても、リンクを開くだけですぐ使えます。</div>
+          <button class="btn" id="shareBtn" type="button" style="align-self:flex-start">友達に教える</button>
+          <div class="note" id="shareMsg" role="status" style="margin:0"></div>
+        </div>
+        <div class="setgroup">
           <div class="sethead">作った人に送る</div>
           <div class="note">使いにくいところ、ほしい機能、よかったところなど、なんでも教えてください。単語や説明の間違いは、それぞれの横の「間違いを報告」から送れます。</div>
           <button class="btn" id="fbBtn" type="button" style="align-self:flex-start">感想・要望を送る</button>
@@ -1044,9 +1050,11 @@ function sessHtml(){
       <div class="tile"><b>${min}<small>分</small></b><span>かかった時間</span></div></div>
     <div class="note">${msg}${sess.fresh.length?`新しく始めた単語は ${sess.fresh.length}語です。`:""}${(()=>{const g=goalN(),n=state.days[dayNum()]||0;return !g?"":n>=g?`今日の目標（${g}枚）は達成しています。`:`今日の目標まで、あと ${g-n}枚です。`})()}</div>
     ${miss.length?`<div class="label">浮かばなかった単語（${miss.length}）</div><div class="dfchips">${miss.map(q=>{const w=byId(wid(q));return w?`<span class="twc">${esc(w.w)}<small>${esc(w.ja)}</small></span>`:""}).join("")}</div>
-      <button class="linkbtn" id="missAgain" style="align-self:flex-start">この${miss.length}語だけもう一度</button>`:""}`;
+      <button class="linkbtn" id="missAgain" style="align-self:flex-start">この${miss.length}語だけもう一度</button>`:""}
+    <div class="row" style="gap:6px;align-items:baseline"><button class="linkbtn" id="sessShare" type="button">このアプリを友達に教える</button><span class="note" id="sessShareMsg" role="status" style="margin:0"></span></div>`;
 }
-function bindSess(){const b=$("#missAgain");if(b)b.onclick=()=>startCram(Object.keys(sess.first).filter(q=>sess.agains[q]))}
+function bindSess(){const b=$("#missAgain");if(b)b.onclick=()=>startCram(Object.keys(sess.first).filter(q=>sess.agains[q]));
+  const sh=$("#sessShare");if(sh)sh.onclick=()=>shareApp($("#sessShareMsg"))}
 // 新しい単語を n 語選ぶ：自分で追加した単語を先に、あとは選んだレベルから順番に1語ずつ（どのレベルの単語も出るように）
 function pickFresh(n,skip=[]){
   const fresh=allWords().filter(w=>!state.cards[w.id]&&inLevel(w)&&!skip.includes(w.id)),nw=fresh.filter(w=>!w.lv).slice(0,n);
@@ -2943,6 +2951,17 @@ $("#bkReset").onclick=()=>{
 $("#bkResetNo").onclick=()=>{$("#bkResetBox").hidden=true;$("#bkReset").hidden=false};
 $("#bkResetYes").onclick=()=>{resetLocal();if(ON_CLAUDE&&dbRef)save();$("#bkResetBox").hidden=true;$("#bkReset").hidden=false;bkMsg("この端末の進み具合を消しました。",true)};
 $("#fbBtn").onclick=()=>openReport(REP.feedback());
+/* 友達に教える（2026-10-21、口コミで広がっているため）：スマホは共有の画面（LINE などを選べる）、ない端末はリンクと紹介文をコピー。
+   claude.ai 版からでも、登録なしで開ける GitHub 版のリンクを送る */
+const SHARE_URL="https://kyoumaru18-create.github.io/tango-ring/";
+const SHARE_TEXT="英単語を、使い分けや例文といっしょに覚えられる無料アプリ「単語リング」。登録なしですぐ使えます。";
+async function shareApp(msgEl){
+  if(navigator.share){try{await navigator.share({title:"単語リング",text:SHARE_TEXT,url:SHARE_URL});logEvent("feature","友達に教える",true);return}catch(e){if(e&&e.name==="AbortError")return}}
+  let ok=false;try{await navigator.clipboard.writeText(SHARE_TEXT+"\n"+SHARE_URL);ok=true}catch(e){}
+  if(msgEl)msgEl.innerHTML=ok?"紹介文とリンクをコピーしました。LINE などに貼り付けて送ってください。":`このリンクを送ってください：<br>${esc(SHARE_URL)}`;
+  if(ok)logEvent("feature","友達に教える",true);
+}
+$("#shareBtn").onclick=()=>shareApp($("#shareMsg"));
 // 届いた報告（作った人だけに見える欄）
 let repAll=null,repDone={},repShow="open",repErr="",cloudOwner=false,evStats=null;
 const TAB_JA={cards:"カード",words:"単語",quiz:"クイズ",listen:"リスニング",diff:"使い分け",talk:"AI英会話"};
@@ -3117,6 +3136,9 @@ $("#pwaBtn").onclick=doInstall;
 /* 記録を守るためのログインのすすめ（2026-10-20）：iPhone の Safari は、7日間開かないサイトの保存を消すことがある（ホーム画面から開く場合は消えにくい）。
    ログインしていない人が合計50枚答えたら、カードの上に1つだけ出す。「あとで」は7日、「もう出さない」はずっと（localStorage -loginhide）。
    ホーム画面の案内とは同時に出さない（こちらを先に） */
+// この端末で初めて使った日（localStorage -firstday。前から使っている人は、答えた記録のいちばん古い日）
+function firstDay(){let f=Infinity;try{f=+localStorage.getItem(LS+"-firstday")||Infinity}catch(e){}
+  Object.keys(state.days||{}).forEach(d=>{if(+d<f)f=+d});if(f===Infinity){f=dayNum();try{localStorage.setItem(LS+"-firstday",String(f))}catch(e){}}return f}
 function renderLoginBar(){const el=$("#loginBar");if(!el)return false;
   let hide=0;try{hide=+localStorage.getItem(LS+"-loginhide")||0}catch(e){}
   const total=Object.values(state.days||{}).reduce((a,n)=>a+(n||0),0);
@@ -3134,7 +3156,8 @@ function renderLoginBar(){const el=$("#loginBar");if(!el)return false;
 function renderPwaBar(){const el=$("#pwaBar");if(!el)return;
   if(renderLoginBar()){el.hidden=true;return}
   let hide=0;try{hide=+localStorage.getItem(LS+"-pwahide")||0}catch(e){}
-  const show=!ON_CLAUDE&&CAN_CLOUD&&isPhone()&&!isStandalone()&&helloDone&&!diag&&Date.now()>hide;
+  // 初めて使った日は出さない（2026-10-21。初日は使い方・診断・クイズのお知らせが続くので、2日目に開いたときに出す）
+  const show=!ON_CLAUDE&&CAN_CLOUD&&isPhone()&&!isStandalone()&&helloDone&&!diag&&Date.now()>hide&&dayNum()>firstDay();
   el.hidden=!show;if(!show)return;
   el.innerHTML=`<img class="pwaicon" src="icon-192.png" alt="">
     <div class="pwatxt"><b>ホーム画面に追加すると、アプリのように使えます</b><small>アイコンからすぐ開けて、電波がなくても使えます（無料）</small></div>
