@@ -266,6 +266,26 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .fix{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;max-width:100%;display:flex;flex-direction:column;gap:6px}
 .fix .label{color:var(--warn)}
 .fix .goodline{color:var(--good);font-weight:500}
+/* 接客の練習 */
+#shopArea .panel{gap:12px}
+.shoplist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.shopf{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-height:64px;color:var(--ink)}
+.shopf small{color:var(--muted);font-size:12px;line-height:1.4}
+.shopf .sdone{color:var(--good);font-size:12px}
+.shopchk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.shopbub{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:var(--card)}
+.shopbub.me{border-color:var(--accent)}
+.shopbub.ans{background:var(--soft)}
+.shopwho{font-size:12px;color:var(--muted)}
+.shopsay{font-family:var(--f-display);font-size:21px;line-height:1.35;overflow-wrap:anywhere}
+.shopja{font-size:17px;font-weight:700;line-height:1.5}
+.shopsc{display:flex;gap:16px;flex-wrap:wrap}
+.shopsc b{font-size:18px}
+.shopbk{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.shopph{display:flex;gap:10px;align-items:flex-start}
+.shopph .sw{flex:none}
+.shopph .sen{font-family:var(--f-display);font-size:17px;line-height:1.4}
+.shopph .sja{font-size:14px}
 .fix .phl{color:var(--accent)}
 .phr{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px dashed var(--line);padding-top:4px}
 .phr b{font-family:var(--f-display);font-size:17px;font-weight:400;color:var(--ink)}
@@ -651,6 +671,9 @@ details.flash{animation:flash 1.2s ease}
   <!-- TALK -->
   <section id="tab-talk" class="tabpane" hidden>
     <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="seg" id="talkModeSeg" style="align-self:flex-start"><button data-m="shop" aria-pressed="false">接客の練習</button><button data-m="ai" aria-pressed="false">AIと会話</button></div>
+      <div id="shopArea" hidden></div>
+      <div id="aiTalkBox" style="display:flex;flex-direction:column;gap:14px">
       <div class="panel" id="talkOff" hidden></div>
       <div class="panel" id="talkPre" hidden></div>
       <div class="panel" id="talkSetup">
@@ -681,6 +704,7 @@ details.flash{animation:flash 1.2s ease}
           <div class="row"><button class="btn" id="talkStop" hidden>止める</button><button class="btn primary" id="talkSend">送信</button></div>
         </div>
       </div>
+      </div>
     </div>
   </section>
 </div>
@@ -692,7 +716,7 @@ details.flash{animation:flash 1.2s ease}
     <button data-tab="quiz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 9l2 2 4-4M8 15h8"/></svg>クイズ</button>
     <button data-tab="listen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg>リスニング</button>
     <button data-tab="diff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v6M12 9l-6 6v6M12 9l6 6v6"/><circle cx="12" cy="3.5" r="1.5"/></svg>使い分け</button>
-    <button data-tab="talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>AI英会話</button>
+    <button data-tab="talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>英会話</button>
   </div>
 </nav>
 
@@ -1771,7 +1795,8 @@ const SCEN=[
  {id:"way",ja:"道を聞く",en:"Asking for directions in a city",role:"a local person on the street; the learner is a lost tourist"},
  {id:"hotel",ja:"ホテル",en:"Checking in at a hotel",role:"a hotel front-desk clerk; the learner is a guest"},
  {id:"work",ja:"職場の雑談",en:"Small talk with a coworker",role:"a friendly coworker chatting during a break"},
- {id:"register",ja:"レジ・買い物",en:"Paying at a store checkout in the US",role:"a cashier at a clothing store in the US. Real flow, one step per message: greet and ring up the items, maybe ask if they found everything okay, tell the total, ask how they'd like to pay, ask if they want a bag or the receipt, then say goodbye. Use short, casual cashier phrases such as \"Hi, how's it going?\", \"Did you find everything okay?\", \"Your total is $42.50.\", \"Do you need a bag?\". Only mention a rewards or membership program once, and only if it fits"},
+ {id:"register",ja:"買い物（自分が客）",en:"Paying at a store checkout in the US",role:"a cashier at a clothing store in the US. Real flow, one step per message: greet and ring up the items, maybe ask if they found everything okay, tell the total, ask how they'd like to pay, ask if they want a bag or the receipt, then say goodbye. Use short, casual cashier phrases such as \"Hi, how's it going?\", \"Did you find everything okay?\", \"Your total is $42.50.\", \"Do you need a bag?\". Only mention a rewards or membership program once, and only if it fits"},
+ {id:"shopclerk",ja:"接客（自分が店員）",en:"A customer from abroad shopping at a drugstore or variety store in Japan. The learner is the Japanese store clerk at the register or on the shop floor",role:"a customer from abroad (a tourist or someone living in Japan) at a drugstore or variety store in Japan. The learner is the Japanese clerk, who is not confident in English. Each time, choose one realistic situation and vary it: asking where an item is (sunscreen, eye drops, face masks, cooling sheets, snacks, souvenirs), asking for a recommendation or a tester, buying medicine for a headache or a cold, tax-free shopping, paying by card or phone, not needing a bag, an item that is sold out, wanting gift wrapping. Speak like a real customer: short and natural, sometimes casual. Start by walking up and saying your first line. Stay in the customer role; if the clerk's English is unclear, react like a friendly real customer would (ask again or rephrase)"},
  {id:"restaurant",ja:"レストラン",en:"Eating at a restaurant in the US",role:"a server at a casual restaurant in the US. Real flow, one step per message: greet and seat, offer drinks, take the order, check on the food later, bring the check. Keep it short and friendly"},
  {id:"airport",ja:"空港",en:"Airport check-in and immigration",role:"first an airline check-in agent, then an immigration officer asking about purpose and length of stay"},
  {id:"transit",ja:"電車・タクシー",en:"Taking a taxi or a train",role:"a taxi driver or a station staff member helping with destinations and transfers"},
@@ -1805,7 +1830,8 @@ Rules:
 - Reply with only one JSON object and nothing else:
 {"reply": "your English reply", "ja": "a natural Japanese translation of your reply", "good": "in Japanese, one short warm sentence about what worked in the learner's last message (what got across, a good word choice, or simply that the meaning was clear); empty string if there is no learner message yet", "feedback": "in Japanese, the one most useful point about grammar or word choice in the learner's last message; empty string if it was natural or there is no learner message yet", "better": "a more natural English version of the learner's last message; empty string if it was already natural", "phrases": [{"en": "a short useful English expression (1-6 words) that the learner needed in their last message but wrote in Japanese, could not say, or used unnaturally", "pos": "verb|noun|adj|adv|phrase", "ja": "its Japanese meaning", "ex": "a short natural example sentence that contains en exactly as written", "exJa": "Japanese translation of ex"}]}
 - The learner is an adult who may feel nervous about English. Always say what worked first ("good"). Do not list every small mistake; pick only the one that matters most. Only correct something you are sure is wrong or unnatural; if the learner's English is acceptable, leave "feedback" and "better" empty rather than inventing a correction. "phrases": 0-2 items, only expressions the learner really needed in their last message; an empty array if their English was natural.
-- If the learner writes in Japanese, put the English way to say it in "better", explain briefly in "feedback", and continue the conversation in English.${talkWords().length?`${talk.fromCards?`
+${talk.scen==="shopclerk"?`- In this scenario the learner plays the store clerk and you play the customer. Never switch roles or act as a teacher in "reply". In "better", suggest short, polite, natural English a clerk would really say (for example "Do you need a bag?", "It's in aisle 3.", "Just a moment, please."), not a word-for-word translation of Japanese keigo.
+`:""}- If the learner writes in Japanese, put the English way to say it in "better", explain briefly in "feedback", and continue the conversation in English.${talkWords().length?`${talk.fromCards?`
 - The learner just studied these words on flashcards and wants to practice using them: ${talkWords().map(w=>`${w.w} (${w.ja})`).join(", ")}. Over the conversation, use them yourself where they fit naturally, and keep creating natural chances for the learner to use each of them, one at a time (for example, ask something the learner can answer with one of the words). Never force a word that does not fit the situation, and do not explain the words.`
 :`
 - The learner is currently memorizing these words: ${talkWords().map(w=>w.w).join(", ")}. When one fits the situation, use it naturally in your reply (a few over the whole conversation, never forced, never explained). Now and then, steer the conversation so the learner has a natural chance to use one of them.`}`:""}`}
@@ -1919,6 +1945,202 @@ Suggest 2 short, natural replies the learner could say next.${talkWords().some(w
   }catch(e){h.innerHTML=`<div class="err">${esc(aiCopy(e&&e.code))}</div>`}
   $("#hintBtn").disabled=false;
 };
+
+/* ---------- 接客の練習（AIなし。2026-10-23） ----------
+   ドラッグストア・雑貨店のレジに外国人のお客さんが来たときの練習。作った人がレジでぎこちなくなるのを直したくて、このアプリを作り始めた。
+   場面（SHOP）ごとに、レジの流れの順で2種類を出す：
+   c：お客さんの英語を聞いて（英文はふせておく）、返事を3つから選ぶ。{t:"c",en,ja,o:[[正解,訳],[まちがい,訳],[まちがい,訳]],tip}。o の1つ目が正解（出すときは並べ替える）
+   s：店員のひと言を、声に出して言ってから答えを見る。{t:"s",ja:"言いたいこと",en,alt:ほかの言い方,tip}
+   {total} は毎回でたらめな金額（3けた〜4けた）。まちがいの返事は「その場に合わない」ものにして、ていねいさの差では迷わせない */
+const SHOP=[
+ {id:"basic",ja:"ふつうの会計",d:"ポイントカード・袋・現金",steps:[
+  {t:"s",ja:"レジに来たお客さんにあいさつする（いらっしゃいませ）",en:"Hello!",alt:"Hi there.",tip:"「いらっしゃいませ」にぴったりの英語はありません。笑顔で Hello! と言えば十分です。"},
+  {t:"s",ja:"ポイントカードを持っているか聞く",en:"Do you have a point card?",tip:"日本の店なら point card で通じます（海外では rewards card とも言います）。"},
+  {t:"c",en:"Sorry, what's a point card?",ja:"すみません、ポイントカードって何ですか？",o:[["It's a card for collecting points. It's free.","ポイントをためるカードです。無料ですよ。"],["That'll be 1,200 yen.","1,200円です。"],["Here's your receipt.","レシートです。"]]},
+  {t:"s",ja:"袋がいるか聞く（1枚5円）",en:"Do you need a bag? It's 5 yen.",alt:"Would you like a bag? They're 5 yen each.",tip:"有料なら値段もいっしょに言うと親切です。"},
+  {t:"c",en:"No, I'm good, thanks.",ja:"いえ、大丈夫です。ありがとう。",o:[["OK. I'll put a sticker on it.","わかりました。シールを貼っておきますね。"],["Sorry, it's sold out.","すみません、売り切れです。"],["Please enter your PIN.","暗証番号を入力してください。"]],tip:"I'm good は「（もう足りているので）けっこうです」。断るときの決まり文句です。"},
+  {t:"s",ja:"合計の金額を伝える（{totalJa}）",en:"That'll be {total} yen.",alt:"Your total is {total} yen.",tip:"{total}円は {totalEn} yen と読みます。"},
+  {t:"c",en:"Here you go.",ja:"はい、どうぞ。（お札を渡す）",o:[["Thank you. Here's your change.","ありがとうございます。おつりです。"],["Do you have a point card?","ポイントカードはお持ちですか？"],["It's over there.","あちらです。"]],tip:"Here you go. は物を渡すときのひと言。店員が商品やおつりを渡すときにも使えます。"},
+  {t:"s",ja:"お礼を言って見送る（ありがとうございました）",en:"Thank you! Have a nice day.",alt:"Thanks! Have a good one.",tip:"Have a nice day. を付けると、ぐっと自然になります。"}]},
+ {id:"card",ja:"カード・スマホで払う",d:"タッチ・暗証番号・レシート",steps:[
+  {t:"s",ja:"支払い方法を聞く（現金ですか、カードですか）",en:"Cash or card?",alt:"How would you like to pay?",tip:"短く Cash or card? で十分伝わります。"},
+  {t:"c",en:"Can I pay by card?",ja:"カードで払えますか？",o:[["Sure. Please tap it here.","はい。こちらにタッチしてください。"],["It's in aisle 3.","3番の通路にあります。"],["No, I don't need a bag.","いえ、袋はいりません。"]]},
+  {t:"s",ja:"カードをここに差し込むように言う",en:"Please insert your card here.",tip:"insert ＝ 差し込む。タッチなら tap、スライドなら swipe。"},
+  {t:"s",ja:"暗証番号を入力するように言う",en:"Please enter your PIN.",tip:"PIN（ピン）＝ 暗証番号。"},
+  {t:"c",en:"Oh, it didn't go through.",ja:"あれ、通らなかった。",o:[["Let me try again.","もう一度やってみますね。"],["Here's your receipt.","レシートです。"],["It's very popular.","とても人気です。"]],tip:"go through ＝（支払いが）通る。"},
+  {t:"c",en:"Do you take Apple Pay?",ja:"Apple Pay は使えますか？",o:[["Yes. Please hold your phone here.","はい。こちらにスマホをかざしてください。"],["No, it's not for kids.","いえ、子ども用ではありません。"],["It's 5 yen.","5円です。"]],tip:"Do you take 〜? ＝ 〜は使えますか（受け付けますか）。支払いの質問でとてもよく聞きます。"},
+  {t:"s",ja:"レシートがいるか聞く",en:"Do you need a receipt?",alt:"Would you like your receipt?"}]},
+ {id:"where",ja:"売り場を聞かれる",d:"日焼け止めの場所を案内",steps:[
+  {t:"c",en:"Excuse me, where can I find sunscreen?",ja:"すみません、日焼け止めはどこですか？",o:[["It's in aisle 4, next to the cosmetics.","4番の通路の、化粧品の隣です。"],["Sorry, we only take cash.","すみません、現金のみです。"],["That'll be 980 yen.","980円です。"]],tip:"Where can I find 〜? は売り場を聞くときの決まった言い方です。"},
+  {t:"c",en:"Sorry, which way?",ja:"すみません、どっちですか？",o:[["Let me show you. This way, please.","ご案内します。こちらへどうぞ。"],["Do you have a point card?","ポイントカードはお持ちですか？"],["Have a nice day!","よい一日を！"]],tip:"口で説明しにくいときは、Let me show you. でいっしょに歩くのがいちばん確実です。"},
+  {t:"s",ja:"商品の前で「こちらです」と言う（いくつか並んでいる）",en:"Here they are.",alt:"These are all sunscreens.",tip:"1つなら Here it is.、いくつかなら Here they are.。"},
+  {t:"c",en:"Is this one waterproof?",ja:"これはウォータープルーフですか？",o:[["Yes, it's waterproof.","はい、汗や水に強いタイプです。"],["Yes, it's on the second floor.","はい、2階です。"],["No, I'm good, thanks.","いえ、大丈夫です。"]],tip:"waterproof ＝ 水に強い。日焼け止めや化粧品でよく聞かれます。"},
+  {t:"c",en:"Great, thanks!",ja:"よかった、ありがとう！",o:[["You're welcome.","どういたしまして。"],["Please enter your PIN.","暗証番号を入力してください。"],["Sorry, it's sold out.","すみません、売り切れです。"]]},
+  {t:"s",ja:"ほかに何か探しているか聞く",en:"Are you looking for anything else?",alt:"Anything else?"}]},
+ {id:"stock",ja:"在庫がない",d:"売り切れ・似た商品・入荷",steps:[
+  {t:"c",en:"Do you have these eye drops? I saw them online.",ja:"この目薬はありますか？ネットで見たんです。",o:[["Let me check. Just a moment, please.","確認しますね。少々お待ちください。"],["Yes, please sign here.","はい、ここにサインしてください。"],["It's 5 yen.","5円です。"]],tip:"スマホの写真を見せられることが多いです。まず Let me check. で落ち着いて。"},
+  {t:"s",ja:"申し訳ありません、売り切れです、と言う",en:"I'm sorry, they're sold out.",alt:"I'm sorry, we're out of stock.",tip:"目薬（eye drops）のように複数形の物は they're、1つの物なら it's sold out。"},
+  {t:"c",en:"Oh no. Do you have something similar?",ja:"ああ、残念。似たものはありますか？",o:[["This one is similar. It's also popular.","こちらが似ています。これも人気ですよ。"],["Here's your change.","おつりです。"],["Have a nice day!","よい一日を！"]]},
+  {t:"c",en:"When will you get more?",ja:"いつ入荷しますか？",o:[["I'm not sure. Maybe next week.","はっきりわかりません。たぶん来週です。"],["It's in aisle 2.","2番の通路です。"],["Cash or card?","現金ですか、カードですか？"]],tip:"get more（もっと手に入る）＝ 入荷する。"},
+  {t:"s",ja:"ほかの店舗にはあるかもしれない、と伝える",en:"Our other store might have them.",tip:"might ＝ 〜かもしれない。言い切れないときに便利です。"}]},
+ {id:"medicine",ja:"薬の相談",d:"頭痛薬・薬剤師を呼ぶ",steps:[
+  {t:"c",en:"I have a headache. Do you have anything for it?",ja:"頭が痛いんです。何か効くものはありますか？",o:[["Yes. These are for headaches.","はい。こちらが頭痛薬です。"],["Yes, it's waterproof.","はい、ウォータープルーフです。"],["Do you need a bag?","袋はいりますか？"]],tip:"anything for 〜 ＝ 〜に効くもの。for a cold（かぜ）、for a stomachache（腹痛）なども。"},
+  {t:"c",en:"Which one do you recommend?",ja:"どれがおすすめですか？",o:[["Let me get the pharmacist.","薬剤師を呼んできますね。"],["Here's your receipt.","レシートです。"],["It's three for 1,000 yen.","3つで1,000円です。"]],tip:"薬の相談には自分で答えず、薬剤師（pharmacist）につなぐのが安心です。"},
+  {t:"s",ja:"少々お待ちください、と言う",en:"Just a moment, please.",alt:"One moment, please."},
+  {t:"c",en:"How many should I take?",ja:"何錠飲めばいいですか？",o:[["The pharmacist will explain.","薬剤師がご説明します。"],["Two for 1,000 yen.","2つで1,000円です。"],["It's on the second floor.","2階です。"]]},
+  {t:"s",ja:"飲み方は箱に書いてある、と伝える",en:"The directions are on the box.",alt:"It's written on the box.",tip:"directions は「道順」のほかに「使い方・飲み方」の意味もあります。"}]},
+ {id:"taxfree",ja:"免税",d:"パスポート・免税カウンター",steps:[
+  {t:"c",en:"Can I get this tax-free?",ja:"これは免税で買えますか？",o:[["Yes. May I see your passport?","はい。パスポートを見せていただけますか？"],["Yes, it's for headaches.","はい、頭痛用です。"],["No, I'm good, thanks.","いえ、大丈夫です。"]],tip:"免税のきまり（金額や手続き）は時期やお店で変わるので、くわしい説明はお店のやり方に合わせてください。"},
+  {t:"s",ja:"パスポートを見せてもらう",en:"May I see your passport, please?",alt:"Can I see your passport?"},
+  {t:"c",en:"Oh, I left it at the hotel.",ja:"あ、ホテルに置いてきちゃった。",o:[["I'm sorry, we need your passport for tax-free.","申し訳ありません、免税にはパスポートが必要です。"],["OK, please enter your PIN.","はい、暗証番号を入力してください。"],["It's in aisle 3.","3番の通路です。"]],tip:"left ＝ leave（置いてくる）の過去形。"},
+  {t:"s",ja:"免税カウンターはあちらです、と案内する",en:"The tax-free counter is over there.",tip:"over there ＝ あちら。指さしながら言えば伝わります。"}]},
+ {id:"again",ja:"聞き取れない",d:"聞き返す・ゆっくり・写真",steps:[
+  {t:"c",en:"Hey, do you guys have any of those cooling sheets for fevers?",ja:"ねえ、熱のときに貼る冷却シートってある？",o:[["Sorry, could you say that again?","すみません、もう一度言っていただけますか？"],["Yes, it's 5 yen.","はい、5円です。"],["Have a nice day!","よい一日を！"]],tip:"わからないときは、わかったふりをせずに聞き返すのがいちばん。you guys は「お店の人たち」くらいの意味です。"},
+  {t:"s",ja:"もう少しゆっくり話してもらう",en:"Could you speak a little more slowly?",tip:"a little を入れると、やわらかいお願いになります。"},
+  {t:"c",en:"Cooling sheets. For a fever.",ja:"冷却シート。熱のときの。",o:[["Oh, I see. They're over here.","ああ、わかりました。こちらです。"],["Here's your change.","おつりです。"],["Do you have a point card?","ポイントカードはお持ちですか？"]],tip:"cooling sheet ＝ 冷却シート（おでこに貼るもの）。fever ＝ 熱。"},
+  {t:"s",ja:"商品の写真があるか聞く",en:"Do you have a picture of it?",tip:"スマホの写真を見せてもらうと早いです。"},
+  {t:"s",ja:"翻訳アプリを使わせてもらう",en:"Let me use a translation app.",tip:"むずかしい話は、無理せずアプリに頼ってOK。"}]},
+ {id:"popular",ja:"おすすめを聞かれる",d:"人気の商品・テスター・まとめ買い",steps:[
+  {t:"c",en:"What's popular with tourists?",ja:"観光客に人気なのは何ですか？",o:[["These face masks are very popular.","こちらのフェイスマスク（シートマスク）がとても人気です。"],["Please insert your card.","カードを差し込んでください。"],["Here's your receipt.","レシートです。"]],tip:"face mask はシートマスクのこと（感染予防のマスクは mask）。"},
+  {t:"c",en:"Can I try it?",ja:"試してもいいですか？",o:[["Sure. Here's a tester.","どうぞ。こちらがテスターです。"],["Sorry, we only take cash.","すみません、現金のみです。"],["The directions are on the box.","使い方は箱に書いてあります。"]]},
+  {t:"s",ja:"3つで1,000円です、と言う",en:"They're three for 1,000 yen.",tip:"「3つで〜円」は three for 〜 yen。1,000 は one thousand。"},
+  {t:"c",en:"OK, I'll take three.",ja:"じゃあ、3つにします。",o:[["Thank you. The register is this way.","ありがとうございます。レジはこちらです。"],["It's in aisle 4.","4番の通路です。"],["May I see your passport?","パスポートを見せていただけますか？"]],tip:"I'll take 〜 ＝ 〜をください（買います）。"},
+  {t:"s",ja:"ほかにご入用のものはありますか、と聞く",en:"Anything else?",alt:"Is there anything else?"}]},
+ {id:"limit",ja:"個数の制限・袋分け",d:"お一人様〜個まで・小分けの袋",steps:[
+  {t:"c",en:"Can I get ten of these?",ja:"これを10個もらえますか？",o:[["I'm sorry, there's a limit of five per customer.","申し訳ありません、お一人様5個までです。"],["Sure, here's a tester.","どうぞ、テスターです。"],["It's waterproof.","ウォータープルーフです。"]],tip:"per customer ＝ お客さま1人につき。"},
+  {t:"c",en:"Oh, OK. Then five, please.",ja:"そうですか。じゃあ5個で。",o:[["OK, five. Thank you.","はい、5個ですね。ありがとうございます。"],["Please enter your PIN.","暗証番号を入力してください。"],["Let me get the pharmacist.","薬剤師を呼んできますね。"]]},
+  {t:"c",en:"Could you put them in separate bags? They're gifts.",ja:"別々の袋に入れてもらえますか？おみやげなんです。",o:[["Sure. How many bags do you need?","かしこまりました。袋はいくつ必要ですか？"],["No, it's not tax-free.","いえ、免税ではありません。"],["It's on the second floor.","2階です。"]],tip:"separate ＝ 別々の。"},
+  {t:"s",ja:"おみやげ用の小さな袋をつけるか聞く",en:"Would you like some small bags for gifts?",tip:"Would you like 〜? は「〜はいかがですか」。すすめるときに便利です。"},
+  {t:"s",ja:"合計の金額を伝える（{totalJa}）",en:"That'll be {total} yen.",alt:"Your total is {total} yen.",tip:"{total}円は {totalEn} yen と読みます。"}]},
+ {id:"return",ja:"返品・交換",d:"レシート・サイズちがい",steps:[
+  {t:"c",en:"Hi, I bought this yesterday, but it's the wrong size.",ja:"昨日これを買ったんですが、サイズがちがっていて。",o:[["I see. Do you have the receipt?","かしこまりました。レシートはお持ちですか？"],["Yes, it's very popular.","はい、とても人気です。"],["Have a nice day!","よい一日を！"]]},
+  {t:"s",ja:"交換か返金か聞く",en:"Would you like to exchange it or get a refund?",tip:"exchange ＝ 交換、refund ＝ 返金。"},
+  {t:"c",en:"Can I exchange it for a bigger one?",ja:"大きいのと交換できますか？",o:[["Sure. Let me get one.","はい。お持ちしますね。"],["Sorry, we only take cash.","すみません、現金のみです。"],["Here's a tester.","テスターです。"]]},
+  {t:"s",ja:"開けた商品は返品できない、と伝える（別のお客さんに）",en:"I'm sorry, we can't accept returns on opened items.",alt:"I'm sorry, we can't take it back if it's opened.",tip:"opened ＝ 開けた。むずかしければ「Opened, no return. Sorry.」でも伝わります。"}]},
+ {id:"gift",ja:"プレゼント包装",d:"ラッピング・値札・待ち時間",steps:[
+  {t:"c",en:"It's a gift. Could you wrap it?",ja:"プレゼントなんです。包んでもらえますか？",o:[["Sure. Please wait a moment.","かしこまりました。少々お待ちください。"],["It's in aisle 3.","3番の通路です。"],["I'm sorry, they're sold out.","すみません、売り切れです。"]],tip:"wrap ＝ 包む。gift-wrap とも言います。"},
+  {t:"s",ja:"どの包装紙がいいか聞く",en:"Which wrapping paper would you like?",tip:"Which 〜 would you like? で、選んでもらう聞き方になります。"},
+  {t:"c",en:"The blue one, please.",ja:"青いのでお願いします。",o:[["Sure. It'll take about five minutes.","かしこまりました。5分ほどかかります。"],["Please enter your PIN.","暗証番号を入力してください。"],["Do you need a receipt?","レシートはいりますか？"]],tip:"It'll take 〜 ＝ （時間が）〜かかります。"},
+  {t:"s",ja:"値札は外しておきますね、と言う",en:"I'll take the price tag off.",tip:"price tag ＝ 値札。take 〜 off ＝ 〜を外す。"}]},
+ {id:"trouble",ja:"支払いのトラブル",d:"カードが使えない・ATM",steps:[
+  {t:"s",ja:"支払い方法を聞く",en:"How would you like to pay?",alt:"Cash or card?"},
+  {t:"c",en:"By card. Here.",ja:"カードで。はい。",o:[["Thank you. Please insert it here.","ありがとうございます。こちらに差し込んでください。"],["It's three for 1,000 yen.","3つで1,000円です。"],["You're welcome.","どういたしまして。"]]},
+  {t:"s",ja:"申し訳ありません、このカードは使えないようです、と伝える",en:"I'm sorry, this card doesn't seem to work.",alt:"I'm sorry, this card was declined.",tip:"declined ＝（カード会社に）断られた。doesn't seem to 〜 ＝ 〜ないようです、とやわらかく言えます。"},
+  {t:"c",en:"Hmm. Could you try one more time?",ja:"うーん。もう一度やってもらえますか？",o:[["Sure, let me try again.","はい、もう一度やってみます。"],["The directions are on the box.","使い方は箱に書いてあります。"],["May I see your passport?","パスポートを見せていただけますか？"]]},
+  {t:"c",en:"Is there an ATM nearby?",ja:"近くにATMはありますか？",o:[["Yes, there's one in the convenience store next door.","はい、隣のコンビニにあります。"],["Yes, it's waterproof.","はい、ウォータープルーフです。"],["Here they are.","こちらです。"]],tip:"nearby ＝ 近くに。next door ＝ 隣に。"},
+  {t:"s",ja:"商品はレジでお預かりしておきます、と言う",en:"We'll keep your items here at the register.",alt:"I'll hold these for you.",tip:"hold ＝ 取っておく。"}]}
+];
+const SHOP_DONE_KEY=LS+"-shop";
+let shopDone={};try{shopDone=JSON.parse(localStorage.getItem(SHOP_DONE_KEY)||"{}")||{}}catch(e){}
+let shopShowEn=false;try{shopShowEn=localStorage.getItem(LS+"-shopen")==="1"}catch(e){}
+let shop={view:"menu"};
+// 金額を英語の読み方に（3けた〜4けた）
+function numEn(n){const o=["","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"],t=["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+  const u100=x=>x<20?o[x]:t[Math.floor(x/10)]+(x%10?"-"+o[x%10]:""),u1000=x=>(x>=100?o[Math.floor(x/100)]+" hundred"+(x%100?" ":""):"")+(x%100?u100(x%100):"");
+  return n>=1000?u1000(Math.floor(n/1000))+" thousand"+(n%1000?" "+u1000(n%1000):""):u1000(n)}
+function shopStart(id){
+  const f=SHOP.find(x=>x.id===id)||SHOP[0],n=(30+Math.floor(Math.random()*970))*10,
+    fill=s=>s&&s.replace(/\{total\}/g,n.toLocaleString("en-US")).replace(/\{totalJa\}/g,n.toLocaleString("ja-JP")+"円").replace(/\{totalEn\}/g,numEn(n));
+  const steps=f.steps.map(s=>({...s,en:fill(s.en),ja:fill(s.ja),alt:fill(s.alt),tip:fill(s.tip),
+    opts:s.o?shuffle(s.o.map((x,k)=>({en:x[0],ja:x[1],ok:k===0}))):null,pick:null,shown:false,played:false,said:null,heard:""}));
+  shop={view:"run",f,steps,i:0,showEn:shopShowEn};logEvent("feature","接客 "+f.id,true);renderShop();window.scrollTo(0,0);
+}
+function shopRandom(){const last=shop.f&&shop.f.id,pool=SHOP.filter(x=>x.id!==last),min=Math.min(...pool.map(x=>shopDone[x.id]||0));
+  const c=pool.filter(x=>(shopDone[x.id]||0)===min);shopStart(c[Math.floor(Math.random()*c.length)].id)}   // まだやっていない（少ない）場面から
+function shopSay(t,slow){speak(t,slow?.75:1)}
+function renderShop(){
+  const a=$("#shopArea");if(!a)return;
+  if(shop.view==="menu"){
+    a.innerHTML=`<div class="panel fade"><div class="label">接客の練習（ドラッグストア・雑貨店のレジ）</div>
+      <div class="note" style="margin:0">外国人のお客さんがレジに来たときの練習です。お客さんの英語を聞いて返事を選んだり、店員のひと言を声に出して言ってみたりします。1つの場面は1〜2分。</div>
+      <button class="btn primary" id="shopRand" type="button">ランダムな場面で始める</button>
+      <div class="shoplist">${SHOP.map(f=>`<button class="shopf" type="button" data-f="${f.id}"><b>${esc(f.ja)}</b><small>${esc(f.d)}</small>${shopDone[f.id]?`<span class="sdone">✓ ${shopDone[f.id]}回</span>`:""}</button>`).join("")}</div>
+      <label class="shopchk"><input type="checkbox" id="shopEnChk" ${shopShowEn?"checked":""}> お客さんの英文を最初から見せる（聞き取りが不安なとき）</label>
+      <div class="row"><button class="btn" id="shopBook" type="button">フレーズ集を見る</button>${ON_CLAUDE?'<button class="btn" id="shopAi" type="button">AIのお客さんと話す</button>':""}</div>
+      ${ON_CLAUDE?'<div class="note" style="margin:0">「AIのお客さんと話す」では、毎回ちがう注文や質問をしてくるお客さんを相手に、自分の言葉で返す練習ができます。</div>':""}</div>`;
+    $("#shopRand").onclick=shopRandom;
+    a.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>shopStart(b.dataset.f));
+    $("#shopEnChk").onchange=e=>{shopShowEn=e.target.checked;try{localStorage.setItem(LS+"-shopen",shopShowEn?"1":"0")}catch(x){}};
+    $("#shopBook").onclick=()=>{shop={view:"book"};renderShop();window.scrollTo(0,0)};
+    const ai=$("#shopAi");if(ai)ai.onclick=()=>{talk.scen="shopclerk";setTalkMode("ai");renderScen()};
+    return}
+  if(shop.view==="book"){
+    a.innerHTML=`<div class="panel fade"><div class="row" style="justify-content:space-between"><div class="label">フレーズ集</div><button class="linkbtn" id="shopBack" type="button">もどる</button></div>
+      <div class="note" style="margin:0">🙋 は店員（あなた）が言うこと、🧳 はお客さんが言うこと。🔊 で読み上げます。</div>
+      ${SHOP.map(f=>`<div class="shopbk"><div class="label">${esc(f.ja)}</div>${f.steps.map(s=>{
+        const en=s.en.replace(/\{total\}/g,"2,380"),ja=s.ja.replace(/\{totalJa\}/g,"2,380円");
+        return s.t==="s"?`<div class="shopph"><span class="sw">🙋</span><div><div class="sja">${esc(ja)}</div><div class="sen">${esc(en)} ${spk(en)}</div>${s.alt?`<div class="note" style="margin:0">${esc(s.alt.replace(/\{total\}/g,"2,380"))}</div>`:""}</div></div>`
+          :`<div class="shopph"><span class="sw">🧳</span><div><div class="sen">${esc(en)} ${spk(en)}</div><div class="sja">${esc(ja)}</div><div class="note" style="margin:0">→ ${esc(s.o[0][0])} ${spk(s.o[0][0])}</div></div></div>`}).join("")}</div>`).join("")}</div>`;
+    $("#shopBack").onclick=()=>{shop={view:"menu"};renderShop();window.scrollTo(0,0)};return}
+  if(shop.view==="done"){
+    const st=shop.steps,cs=st.filter(s=>s.t==="c"),ss=st.filter(s=>s.t==="s"),cOk=cs.filter(s=>s.opts[s.pick]&&s.opts[s.pick].ok).length,sOk=ss.filter(s=>s.said).length,
+      miss=st.filter(s=>s.t==="c"?!(s.opts[s.pick]&&s.opts[s.pick].ok):!s.said);
+    a.innerHTML=`<div class="panel fade"><div class="label">おつかれさまでした</div>
+      <div style="font-size:18px;font-weight:700">${esc(shop.f.ja)}</div>
+      <div class="shopsc"><span>聞き取って返事 <b>${cOk} / ${cs.length}</b></span><span>言えた <b>${sOk} / ${ss.length}</b></span></div>
+      ${miss.length?`<div class="label">もう一度たしかめたい言い方</div>${miss.map(s=>s.t==="c"
+        ?`<div class="shopph"><span class="sw">🧳</span><div><div class="sen">${esc(s.en)} ${spk(s.en)}</div><div class="sja">${esc(s.ja)}</div><div class="note" style="margin:0">→ ${esc(s.opts.find(o=>o.ok).en)} ${spk(s.opts.find(o=>o.ok).en)}</div></div></div>`
+        :`<div class="shopph"><span class="sw">🙋</span><div><div class="sja">${esc(s.ja)}</div><div class="sen">${esc(s.en)} ${spk(s.en)}</div></div></div>`).join("")}`
+        :'<div class="goodline">◎ ぜんぶできました！本番でもこの調子で。</div>'}
+      <div class="row"><button class="btn primary" id="shopAgain" type="button">もう一度</button><button class="btn" id="shopOther" type="button">ほかの場面</button><button class="btn ghost" id="shopMenu" type="button">場面の一覧</button></div></div>`;
+    $("#shopAgain").onclick=()=>shopStart(shop.f.id);$("#shopOther").onclick=shopRandom;$("#shopMenu").onclick=()=>{shop={view:"menu"};renderShop();window.scrollTo(0,0)};return}
+  const s=shop.steps[shop.i],n=shop.steps.length;
+  const head=`<div class="row" style="justify-content:space-between"><div class="label">${esc(shop.f.ja)}</div><button class="linkbtn" id="shopQuit" type="button">やめる</button></div>
+    <div class="progress"><span>${shop.i+1} / ${n}</span><span>${s.t==="c"?"お客さんの番":"あなたの番"}</span></div><div class="bar"><i style="width:${shop.i/n*100}%"></i></div>`;
+  if(s.t==="c"){
+    const done=s.pick!==null,showEn=done||shop.showEn;
+    a.innerHTML=`<div class="panel fade">${head}
+      <div class="shopbub cust"><div class="shopwho">🧳 お客さん</div>
+        <div class="shopsay">${showEn?esc(s.en):'<span class="muted">（英語を聞き取ってください）</span>'}</div>${done?`<div class="trans">${esc(s.ja)}</div>`:""}
+        <div class="row"><button class="btn ghost" id="shopPlay" type="button">🔊 もう一度</button><button class="btn ghost" id="shopSlow" type="button">ゆっくり</button>${showEn?"":'<button class="linkbtn" id="shopEn" type="button">英文を見る</button>'}</div></div>
+      <div class="label">あなたの返事は？</div>
+      <div class="opts">${s.opts.map((o,k)=>done
+        ?`<div class="opt done ${o.ok?"right":k===s.pick?"wrong":""}"><span class="omain"><span>${esc(o.en)}</span><span class="osub">${esc(o.ja)}</span></span><span class="oside">${spk(o.en)}</span></div>`
+        :`<button class="opt" type="button" data-k="${k}"><span>${esc(o.en)}</span></button>`).join("")}</div>
+      ${done?`<div class="${s.opts[s.pick].ok?"goodline":"err"}">${s.opts[s.pick].ok?"◎ そのとおり！":"△ 正しいのは緑の返事です。"}</div>${s.tip?`<div class="note" style="margin:0">💡 ${esc(s.tip)}</div>`:""}
+        <button class="btn primary" id="shopNext" type="button">${shop.i+1<n?"次へ":"結果を見る"}</button>`:""}</div>`;
+    if(!s.played){s.played=true;shopSay(s.en)}
+    $("#shopPlay").onclick=()=>shopSay(s.en);$("#shopSlow").onclick=()=>shopSay(s.en,true);
+    const se=$("#shopEn");if(se)se.onclick=()=>{shop.showEn=true;renderShop()};
+    a.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{s.pick=+b.dataset.k;const o=s.opts[s.pick];if(o.ok)shopSay(o.en);renderShop()});
+  }else{
+    a.innerHTML=`<div class="panel fade">${head}
+      <div class="shopbub me"><div class="shopwho">🙋 あなた（店員）</div><div class="shopja">${esc(s.ja)}</div></div>
+      ${!s.shown?`<div class="note" style="margin:0">英語で声に出して言ってみてから、答えを見てください。</div>
+        <div class="row">${SR?'<button class="btn" id="shopMic" type="button">🎤 話してみる</button>':""}<button class="btn primary" id="shopShow" type="button">答えを見る</button></div><div class="note" id="shopMicMsg" hidden></div>`
+      :`<div class="shopbub ans">${s.heard?`<div class="note" style="margin:0">あなたの英語（聞き取り）：${esc(s.heard)}</div>`:""}
+        <div class="shopsay">${esc(s.en)} ${spk(s.en)}</div>${s.alt?`<div class="note" style="margin:0">ほかの言い方：${esc(s.alt)} ${spk(s.alt)}</div>`:""}${s.tip?`<div class="note" style="margin:0">💡 ${esc(s.tip)}</div>`:""}</div>
+        ${s.said===null?`<div class="row"><button class="btn" id="shopNg" type="button">言えなかった</button><button class="btn primary" id="shopOk" type="button">言えた</button></div>`
+          :`<button class="btn primary" id="shopNext" type="button">${shop.i+1<n?"次へ":"結果を見る"}</button>`}`}</div>`;
+    const show=()=>{s.shown=true;renderShop();shopSay(s.en)};
+    const sh=$("#shopShow");if(sh)sh.onclick=show;
+    const mic=$("#shopMic");if(mic)mic.onclick=()=>{
+      const m=$("#shopMicMsg"),r=new SR();r.lang="en-US";r.interimResults=false;r.continuous=false;
+      try{speechSynthesis.cancel()}catch(e){}
+      r.onresult=e=>{s.heard=Array.from(e.results).map(x=>x[0].transcript).join(" ").trim()};
+      r.onerror=e=>{m.hidden=false;m.textContent=e.error==="not-allowed"||e.error==="service-not-allowed"?"この画面ではマイクが使えませんでした。声に出して言ってから「答えを見る」を押してください。":"うまく聞き取れませんでした。もう一度どうぞ。"};
+      r.onend=()=>{mic.textContent="🎤 話してみる";if(s.heard)show()};
+      try{r.start();mic.textContent="聞いています…";m.hidden=true}catch(e){m.hidden=false;m.textContent="マイクを始められませんでした。"}};
+    const ok=$("#shopOk"),ng=$("#shopNg");
+    if(ok)ok.onclick=()=>{s.said=true;shopNext()};if(ng)ng.onclick=()=>{s.said=false;shopNext()};
+  }
+  const nx=$("#shopNext");if(nx)nx.onclick=shopNext;
+  $("#shopQuit").onclick=()=>{try{speechSynthesis.cancel()}catch(e){}shop={view:"menu"};renderShop();window.scrollTo(0,0)};
+}
+function shopNext(){
+  if(shop.i+1<shop.steps.length){shop.i++;renderShop();return}
+  shopDone[shop.f.id]=(shopDone[shop.f.id]||0)+1;try{localStorage.setItem(SHOP_DONE_KEY,JSON.stringify(shopDone))}catch(e){}
+  shop.view="done";renderShop();window.scrollTo(0,0);
+}
+// 会話タブの切り替え：接客の練習（AIなし）／AIと会話。GitHub 版は AI が使えないので、最初は接客の練習
+let talkMode=ON_CLAUDE?"ai":"shop";try{const m=localStorage.getItem(LS+"-talkmode");if(m==="ai"||m==="shop")talkMode=m}catch(e){}
+function setTalkMode(m){talkMode=m;try{localStorage.setItem(LS+"-talkmode",m)}catch(e){}renderTalkMode();window.scrollTo(0,0)}
+function renderTalkMode(){
+  $("#talkModeSeg").querySelectorAll("[data-m]").forEach(b=>{b.setAttribute("aria-pressed",String(b.dataset.m===talkMode));b.onclick=()=>setTalkMode(b.dataset.m)});
+  $("#shopArea").hidden=talkMode!=="shop";$("#aiTalkBox").hidden=talkMode!=="ai";
+  if(talkMode==="shop")renderShop();
+}
+renderTalkMode();
 
 /* ---------- diff (使い分け) ---------- */
 const DF_PRESET=["借りる","予約","見る","約束","言う","直す","遅い","合う","大丈夫","かける","思う","教える","作る","わかる","会う","着る","待つ","探す"];
@@ -2827,7 +3049,7 @@ function presetTalk(ids){
   talkPreset=ids;
   if(!talk.started){const n={};ids.forEach(id=>{const c=(byId(id)||{}).cat;if(c)n[c]=(n[c]||0)+1});   // いちばん多いテーマに合う場面を選んでおく
     const top=Object.keys(n).sort((a,b)=>n[b]-n[a])[0];if(top&&THEME_SCEN[top])talk.scen=THEME_SCEN[top];renderScen()}
-  renderTalkPreset();showTab("talk");
+  renderTalkPreset();talkMode="ai";renderTalkMode();showTab("talk");
 }
 function renderTalkPreset(){
   const el=$("#talkPre"),ws=(talkPreset||[]).map(byId).filter(Boolean);el.hidden=!ws.length;if(!ws.length){el.innerHTML="";return}
@@ -3001,7 +3223,7 @@ async function shareApp(msgEl){
 $("#shareBtn").onclick=()=>shareApp($("#shareMsg"));
 // 届いた報告（作った人だけに見える欄）
 let repAll=null,repDone={},repShow="open",repErr="",cloudOwner=false,evStats=null;
-const TAB_JA={cards:"カード",words:"単語",quiz:"クイズ",listen:"リスニング",diff:"使い分け",talk:"AI英会話"};
+const TAB_JA={cards:"カード",words:"単語",quiz:"クイズ",listen:"リスニング",diff:"使い分け",talk:"英会話"};
 /* 使われ方の集計（2026-10-21 に作り直した。「18台って端末ごと？毎日？」「本当に他人か気になる」と言われたため）
    ・「端末」はブラウザごとのでたらめな番号。同じ人でも Safari とホーム画面、スマホとパソコンは別に数える
    ・作った人の端末（owner を送った番号）は外す。この端末は「この端末」と印をつける
