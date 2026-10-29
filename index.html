@@ -1085,9 +1085,20 @@ function sessHtml(){
     <div class="note">${msg}${sess.fresh.length?`新しく始めた単語は ${sess.fresh.length}語です。`:""}${(()=>{const g=goalN(),n=state.days[dayNum()]||0;return !g?"":n>=g?`今日の目標（${g}枚）は達成しています。`:`今日の目標まで、あと ${g-n}枚です。`})()}</div>
     ${miss.length?`<div class="label">浮かばなかった単語（${miss.length}）</div><div class="dfchips">${miss.map(q=>{const w=byId(wid(q));return w?`<span class="twc">${esc(w.w)}<small>${esc(w.ja)}</small></span>`:""}).join("")}</div>
       <button class="linkbtn" id="missAgain" style="align-self:flex-start">この${miss.length}語だけもう一度</button>`:""}
+    ${sessNextHtml()}
     <div class="row" style="gap:6px;align-items:baseline"><button class="linkbtn" id="sessShare" type="button">このアプリを友達に教える</button><span class="note" id="sessShareMsg" role="status" style="margin:0"></span></div>`;
 }
-function bindSess(){const b=$("#missAgain");if(b)b.onclick=()=>startCram(Object.keys(sess.first).filter(q=>sess.agains[q]));
+/* 区切りの結果：明日の復習の数と、（初めての日だけ）ホーム画面に追加のすすめ（2026-10-29。使われ方を見ると、ほとんどの端末が1日だけで終わっていたため。
+   ホーム画面の案内は「初めての日はカードの上に出さない」にしていたので、2日目に来ない人には一度も出ていなかった） */
+function sessNextHtml(){
+  const T=dayNum(),n1=[state.cards,state.rev||{}].reduce((a,st)=>a+Object.values(st).filter(c=>c&&c.due===T+1).length,0);
+  let pwaHide=0;try{pwaHide=+localStorage.getItem(LS+"-pwahide")||0}catch(e){}
+  const pwa=!ON_CLAUDE&&CAN_CLOUD&&isPhone()&&!isStandalone()&&dayNum()<=firstDay()&&pwaHide<9e15;
+  return (n1?`<div class="note" style="margin:0">明日は、今日覚えかけた単語から <b>${n1}語</b> が復習に出てきます。忘れかけたころにもう一度見ると、ぐっと覚えやすくなります。</div>`:"")
+    +(pwa?`<div class="pwabar"><div class="pwatxt"><b>ホーム画面に追加すると、明日もすぐ開けます</b><small>アイコンから開けて、アプリのように使えます（無料）</small></div><button class="btn" type="button" id="sessPwa">${installEvt?"追加する":"やり方を見る"}</button></div>`:"");
+}
+function bindSess(){sendStudyToday();const b=$("#missAgain");if(b)b.onclick=()=>startCram(Object.keys(sess.first).filter(q=>sess.agains[q]));
+  const sp=$("#sessPwa");if(sp)sp.onclick=()=>{logEvent("feature","ホーム画面に追加:区切りから",true);if(installEvt)doInstall();else openPwaHow()};
   const sh=$("#sessShare");if(sh)sh.onclick=()=>shareApp($("#sessShareMsg"))}
 // 新しい単語を n 語選ぶ：自分で追加した単語を先に、あとは選んだレベルから順番に1語ずつ（どのレベルの単語も出るように）
 function pickFresh(n,skip=[]){
@@ -3243,9 +3254,10 @@ function evSummary(rows){
   const own=new Set(rows.filter(r=>r.kind==="owner").map(r=>r.dev));const R=rows.filter(r=>r.dev&&!own.has(r.dev)&&r.kind!=="owner");
   const today=dayNum(),dn=r=>dayNum(new Date(r.created_at)),r7=R.filter(r=>dn(r)>today-7);
   const days=[];for(let d=today-6;d<=today;d++)days.push({d,n:new Set(r7.filter(r=>dn(r)===d).map(r=>r.dev)).size});
-  const dev={};R.forEach(r=>{const x=dev[r.dev]||(dev[r.dev]={id:r.dev,mobile:false,days:new Set(),days7:new Set(),first:dn(r),last:dn(r),cards:0,cards7:0});
+  const dev={};R.forEach(r=>{const x=dev[r.dev]||(dev[r.dev]={id:r.dev,mobile:false,days:new Set(),days7:new Set(),first:dn(r),last:dn(r),cards:0,cards7:0,sd:{}});
     if(r.mobile)x.mobile=true;const d=dn(r);x.days.add(d);if(d>today-7)x.days7.add(d);x.first=Math.min(x.first,d);x.last=Math.max(x.last,d);
-    if(r.kind==="study"){const [sd,n]=String(r.detail).split(":").map(Number);if(n>0){x.cards+=n;if(sd>today-7-1)x.cards7+=n}}});
+    if(r.kind==="study"){const [sd,n]=String(r.detail).split(":").map(Number);if(n>0)x.sd[sd]=Math.max(x.sd[sd]||0,n)}});   // 同じ日の分は、いちばん大きい数
+  Object.values(dev).forEach(x=>{Object.entries(x.sd).forEach(([sd,n])=>{x.cards+=n;if(+sd>today-7)x.cards7+=n})});
   const list=Object.values(dev).sort((a,b)=>b.last-a.last||b.days.size-a.days.size);
   const in7=list.filter(x=>x.days7.size),cnt=k=>r7.filter(r=>r.kind===k);
   const tally=a=>Object.entries(a.reduce((m,r)=>(m[r.detail]=(m[r.detail]||0)+1,m),{})).sort((x,y)=>y[1]-x[1]);
@@ -3261,7 +3273,7 @@ function evHtml(){if(!cloudOwner||!evStats)return "";const e=evStats,li=a=>a.sli
     <div>この7日に開いた端末 <b>${e.devs}</b>台（スマホ ${e.mobile}）・ 2日以上開いた端末 <b>${e.repeat}</b>台</div>
     <div>この7日に答えたカード 合計 <b>${e.cards7}</b>枚${e.devs?`（1台あたり 約${Math.round(e.cards7/e.devs)}枚）`:""}</div>
     ${bars}
-    <div class="note" style="margin:0">「端末」はブラウザごとに数えます。同じ人でも、Safari とホーム画面のアプリ、スマホとパソコンは別の1台になります。答えた枚数は 10月21日から記録しています（翌日に開いたときに前の日の分が届きます）。${e.ownN?`作った人の端末 ${e.ownN}台は数えていません。`:""}</div>
+    <div class="note" style="margin:0">「端末」はブラウザごとに数えます。同じ人でも、Safari とホーム画面のアプリ、スマホとパソコンは別の1台になります。答えた枚数は 10月21日から記録しています（10月29日からは、その日のうちに届きます。それより前は、次の日にまた開いた人の分だけ）。${e.ownN?`作った人の端末 ${e.ownN}台は数えていません。`:""}</div>
     <details class="evdev"><summary>端末ごとに見る（直近30日・${e.list.length}台）</summary><table><thead><tr><th></th><th></th><th>開いた日</th><th>期間</th><th>答えた枚数</th></tr></thead><tbody>${rows}</tbody></table></details>
     <div class="note" style="margin:0">よく開くタブ：${li(e.tabs)}</div><div class="note" style="margin:0">使った機能：${li(e.features)}</div>
     ${e.errors.length?`<div class="err" style="margin:0">エラー ${e.errors.reduce((x,[,n])=>x+n,0)}件</div><pre>${esc(e.errors.slice(0,8).map(([k,n])=>`${n}× ${k}`).join("\n"))}</pre>`:`<div class="note" style="margin:0;color:var(--good)">エラーはありません</div>`}</div>`}
@@ -3359,7 +3371,12 @@ function renderAll(){renderStats();renderSettings();renderLevels();renderCards()
 
 $("#setApply").onclick=applyCardSettings;
 // 画面を閉じた・アプリを切り替えたときも、時間を止める
-document.addEventListener("visibilitychange",()=>{if(document.hidden){if(qTimer)pauseQuiz();if(qt&&qtPause===null)pauseQt()}});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(qTimer)pauseQuiz();if(qt&&qtPause===null)pauseQt();sendStudyToday()}});
+/* その日に答えた枚数を、その日のうちに送る（2026-10-29。前は「次の日に開いたとき」だけだったので、1日しか使わない人の枚数が届かなかった）。
+   ほかのアプリに切り替えたとき・閉じるとき・カードの区切りで、前に送った数から増えていれば送る。集計は端末・日ごとにいちばん大きい数を使う */
+function sendStudyToday(){try{const t=dayNum(),n=state.days[t]||0;if(!n)return;const k=t+":"+n;
+  if(localStorage.getItem(LS+"-studylast")===k)return;localStorage.setItem(LS+"-studylast",k);logEvent("study",k)}catch(e){}}
+window.addEventListener("pagehide",sendStudyToday);
 // claude.ai の外：AI英会話は始められないので、説明と claude.ai 版への案内だけ出す
 /* AIでできること（2026-10-20）：「AIでこんなことができるようになる、というのは知ってほしい」と言われて、GitHub 版の AI英会話タブと設定に出す。
    値段の話はまだしない（アンケートの案は CLAUDE.md の「値段」に保留中） */
