@@ -153,6 +153,15 @@ details .inner{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .aifeat{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
 .aifeat li{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.6;border-left:3px solid var(--accent);padding-left:10px}
 .aifeat li span{color:var(--muted);font-size:13px}
+.tlgrid{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px}
+.tlrow{display:flex;gap:8px;align-items:center;font-size:14px;padding:4px 2px}
+.tlrow b{font-family:var(--f-display);font-size:17px;font-weight:400}
+.tlrow span{color:var(--muted);font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tlmiss summary{cursor:pointer;font-size:13px;color:var(--accent)}
+.tlmiss summary small{color:var(--muted);margin-left:6px}
+.tlsaved{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:6px}
+.tlsaved>div{flex:1;min-width:0;display:flex;flex-direction:column}
+.tlsaved small{color:var(--muted);font-size:12px}
 .lvchip{display:inline-block;font-family:var(--f-body);font-size:11px;line-height:1.6;padding:0 8px;border-radius:999px;background:var(--paper);color:var(--muted);margin-left:6px;vertical-align:1px;white-space:nowrap}
 .tapnote{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-size:12px;color:var(--muted)}
 .ja{font-size:24px;font-weight:700;margin:6px 0 14px}
@@ -585,6 +594,22 @@ details.flash{animation:flash 1.2s ease}
   <!-- WORDS（単語一覧と、単語を追加） -->
   <section id="tab-words" class="tabpane" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="listSum"></div>
+    <details id="testBox" class="addbox">
+      <summary><span class="sumtxt"><b>📷 テスト範囲を作る</b><small>単語帳や小テストの写真・単語のリストから</small></span></summary>
+      <div class="inner">
+        <div class="note" style="margin:0">学校の単語帳や小テストの範囲を、写真か単語のリストから読み取って、その単語だけを集中して練習できます。</div>
+        <div id="ocrWrap" style="display:flex;flex-direction:column;gap:6px">
+          <label class="btn primary" style="align-self:flex-start;cursor:pointer">📷 写真から読み取る<input type="file" id="ocrFile" accept="image/*" hidden></label>
+          <div class="note" style="margin:0;font-size:12px">英語の部分だけを読み取ります。写真はこの端末の中で読み取り、どこにも送りません。はじめて使うときは読み取りの準備（数MB）に少しかかります。</div>
+        </div>
+        <label class="label" for="tlText" style="margin-top:4px">単語を打ち込む・貼り付ける</label>
+        <textarea id="tlText" rows="3" placeholder="例：achieve, available, borrow（改行やカンマで区切る）"></textarea>
+        <button class="btn" id="tlRead" type="button" style="align-self:flex-start">この単語で作る</button>
+        <div class="note" id="tlMsg" role="status" style="margin:0"></div>
+        <div id="tlResult"></div>
+        <div id="tlSaved"></div>
+      </div>
+    </details>
     <details id="addBox" class="addbox">
       <summary><span class="sumtxt"><b>＋ 単語を追加</b><small>AIにテーマで作ってもらう ・ 自分で追加</small></span></summary>
       <div class="inner">
@@ -844,6 +869,8 @@ const CAN_CLOUD=!ON_CLAUDE&&/^https:|^http:\/\/localhost/.test(location.href);
 let sb=null,sbUser=null,acctMsg="",acctBusy=false;
 var cloudChecked=false;   // ログインしているかを確かめ終わったか（終わる前に「ログインしませんか」を出さないため）
 // 2つの進み具合を合わせる：単語ごとに、あとで答えたほう（同じ日なら回数の多いほう）を残す。日ごとの枚数は多いほう。設定は新しいほう
+// テスト範囲：両方にあるものは新しいほう、消したもの（del）は消したまま
+function mergeTests(x,y){const m={};[...(y||[]),...(x||[])].forEach(t=>{if(t&&t.id&&(!m[t.id]||(t.at||0)>=(m[t.id].at||0)))m[t.id]=t});return Object.values(m).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,30)}
 function mergeState(a,b){
   const nw=(a.updated||0)>=(b.updated||0)?a:b,od=nw===a?b:a;
   const pick=(x,y)=>!x?y:!y?x:((x.last??-1)>(y.last??-1)||(x.last??-1)===(y.last??-1)&&(x.seen||0)>=(y.seen||0))?x:y;
@@ -852,7 +879,7 @@ function mergeState(a,b){
   const seen=new Set(),custom=[...nw.custom,...od.custom].filter(w=>{const k=String(w.w).toLowerCase();if(seen.has(k))return false;seen.add(k);return true});
   const ut={...(od.usedTalk||{})};for(const k in nw.usedTalk||{})ut[k]=Math.max(ut[k]||0,nw.usedTalk[k]);
   const sbst={...(od.speedBest||{})};for(const k in nw.speedBest||{}){const x=nw.speedBest[k],y=sbst[k];if(!y||x.score>y.score||x.score===y.score&&x.avg<y.avg)sbst[k]=x}
-  return normalize({...nw,cards:mm(nw.cards,od.cards),rev:mm(nw.rev,od.rev),days,custom,gram:{...(od.gram||{}),...(nw.gram||{})},usedTalk:ut,speedBest:sbst,unlocked:nw.unlocked||od.unlocked,updated:Math.max(a.updated||0,b.updated||0)});
+  return normalize({...nw,cards:mm(nw.cards,od.cards),rev:mm(nw.rev,od.rev),days,custom,gram:{...(od.gram||{}),...(nw.gram||{})},usedTalk:ut,speedBest:sbst,unlocked:nw.unlocked||od.unlocked,tests:mergeTests(nw.tests,od.tests),updated:Math.max(a.updated||0,b.updated||0)});
 }
 const loadScript=src=>new Promise((ok,ng)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=ng;document.head.appendChild(s)});
 async function initCloud(){
@@ -1049,7 +1076,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(
 
 /* ---------- cards ---------- */
 // queue の中身は単語id（英→日）か "r:"+単語id（日→英）
-let cram=false,queue=[],flipped=false,sessionTotal=0,sessionDone=0,cardEx=null,exBusy=false,exErr="",revTyped="",spokenQ=null,doFlip=()=>{};
+let cramTest=null,cram=false,queue=[],flipped=false,sessionTotal=0,sessionDone=0,cardEx=null,exBusy=false,exErr="",revTyped="",spokenQ=null,doFlip=()=>{};
 const isRev=q=>q.startsWith("r:"),wid=q=>isRev(q)?q.slice(2):q;
 /* 日→英カードのヒント（2026-10-19）：どのカードにも、最初の1文字と文字数を出す（s _ _ _ _ _ _ _ _ _）。熟語の空白・ハイフンはそのまま見せる。
    はじめは意味がまったく同じ語（十分な＝enough／sufficient など約500語）だけに出していたが、「ちぐはぐ」と言われて全部に。
@@ -1071,7 +1098,7 @@ const newSess=()=>({t0:Date.now(),n:0,first:{},agains:{},fresh:[]});
 let sess=newSess(),ratioBreak=false;
 // 苦手ほど多く出す方式は終わりがないので、設定の「1回の数」（npd）ごとにひと区切りの結果を出す
 // list を渡すとその単語だけ、渡さないと今日やった単語を、記録を変えずに回す
-function startCram(list){if(qt||qtDone)stopQt();qtBye=false;queue=shuffle((Array.isArray(list)?list:todayDone()).slice());cram=true;sess=newSess();sessionTotal=queue.length;sessionDone=0;flipped=false;cardEx=null;renderCards();window.scrollTo(0,0)}
+function startCram(list){cramTest=null;if(qt||qtDone)stopQt();qtBye=false;queue=shuffle((Array.isArray(list)?list:todayDone()).slice());cram=true;sess=newSess();sessionTotal=queue.length;sessionDone=0;flipped=false;cardEx=null;renderCards();window.scrollTo(0,0)}
 // セットの結果（区切りの画面に出す）
 function sessHtml(){
   const qs=Object.keys(sess.first),ok=qs.filter(q=>sess.first[q]==="good").length,pct=qs.length?Math.round(ok/qs.length*100):0;
@@ -1154,7 +1181,7 @@ function ratioAvg(){const ids=studied().filter(inLevel);return ids.length?Math.r
 // カードを出し始める（もう一度モードから戻るとき、範囲を変えたときも）。初めての人には新しい単語を1回分用意する
 function buildQueue(){
   if(qt||qtDone||qtBye){stopQt();qtBye=false}qtReady=false;
-  cram=false;nuOpen=null;sess=newSess();ratioBreak=false;ratioRecent=[];flipped=false;sessionTotal=0;sessionDone=0;
+  cram=false;cramTest=null;nuOpen=null;sess=newSess();ratioBreak=false;ratioRecent=[];flipped=false;sessionTotal=0;sessionDone=0;
   if(ensureRev())save();
   if(!ratioFresh.length&&!studied().filter(inLevel).length)ratioFresh=pickFresh(npd()).map(w=>w.id);
   ratioNext();
@@ -1251,6 +1278,7 @@ function renderHello(area){
       <li>めくって答えを見たら、<b>「浮かんだ」か「浮かばなかった」</b>を押す</li>
       <li><b>苦手な単語ほどよく出て</b>、覚えた単語は<b>忘れかけたころ</b>にまた出てくる</li>
     </ol>
+    <div class="note" style="margin:0">📷 学校の単語帳や小テストの範囲は、カードの上の<b>「テスト範囲」</b>から写真か単語のリストで取り込んで、その単語だけを練習できます。</div>
     <div class="note">いつでも好きなだけ続けられます。8枚ごとに区切って結果が出て、覚えてきたら新しい単語が自動で足されます（1回の数は設定で5〜100に変えられます）。カードで覚えた単語が、クイズ・リスニング・AI英会話にも出てきます。</div>
     <div class="label" style="margin-top:4px">レベルを選ぶ（いくつでも。あとで変えられます）</div>
     <button class="btn dgbtn" id="helloDiag" type="button">迷ったら：かんたん診断で選ぶ（2分くらい）</button>
@@ -1331,7 +1359,7 @@ function renderCards(){
     :rev&&revTyped.trim()?(norm(revTyped)===norm(w.w)?`<div class="verdict ok">✓ 書いた答えは合っています</div>`
       :syn.some(x=>norm(x.w)===norm(revTyped))?`<div class="verdict ok">○ ${esc(revTyped)} も同じ意味です。このカードは ${esc(w.w)}</div>`
       :`<div class="verdict ng">書いた答え：${esc(revTyped)}</div>`):"";
-  area.innerHTML=`${goalHtml()}${unlockHtml()}<div>${qt?qtBarHtml():""}${cram?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">もう一度モード（覚え具合は変わりません）</span><button class="linkbtn" id="cramStop">やめる</button></div>`:""}${!cram&&!qt?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">苦手ほど多く出ます ・ 新しい単語 ${NEW_MIX[newMix()].name}</span><button class="linkbtn" id="ratioAdd">新しい単語を${npd()}語足す</button></div>${ratioMsg?`<div class="note" style="color:var(--good);margin-bottom:6px">${esc(ratioMsg)}</div>`:""}`:""}<div class="progress"><span>${cram?`もう一度 <b>${queue.length}</b>`:`出題中 <b>${ratioWords().length+ratioFresh.length}</b>語 ・ 平均の覚え具合 <b>${ratioAvg()}</b>%`}</span><span>${rev?"日→英 ・ ":""}${c?"覚え具合 "+Math.round(mNow(c)*100)+"%":"はじめて"}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
+  area.innerHTML=`${goalHtml()}${unlockHtml()}<div>${qt?qtBarHtml():""}${cram?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">${cramTest?`📷 テスト範囲「${esc(cramTest.name)}」`:"もう一度モード（覚え具合は変わりません）"}</span><button class="linkbtn" id="cramStop">やめる</button></div>`:""}${!cram&&!qt?`<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="note" style="color:var(--accent)">苦手ほど多く出ます ・ 新しい単語 ${NEW_MIX[newMix()].name}</span><button class="linkbtn" id="ratioAdd">新しい単語を${npd()}語足す</button></div>${ratioMsg?`<div class="note" style="color:var(--good);margin-bottom:6px">${esc(ratioMsg)}</div>`:""}`:""}<div class="progress"><span>${cram?`${cramTest?"残り":"もう一度"} <b>${queue.length}</b>`:`出題中 <b>${ratioWords().length+ratioFresh.length}</b>語 ・ 平均の覚え具合 <b>${ratioAvg()}</b>%`}</span><span>${rev?"日→英 ・ ":""}${c?"覚え具合 "+Math.round(mNow(c)*100)+"%":"はじめて"}</span></div><div class="bar" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
     <div class="icard fade" id="icard" role="button" tabindex="0" aria-label="カードをめくる"><span class="hole"></span><span class="cmeta">${dotsHtml(box)}</span>${inner}</div>
     ${typed}${flipped?nuanceHtml(w):""}
     <div class="grades" ${flipped?"":"hidden"}>
@@ -1407,12 +1435,14 @@ patterns: 2-4 items covering the main meanings (1 item if the word has only one 
 }
 function grade(g){
   const q=queue.shift(),id=wid(q),store=storeOf(q),t=dayNum();let c=store[id];
-  if(!(q in sess.first))sess.first[q]=g;if(g==="again")sess.agains[q]=(sess.agains[q]||0)+1;sess.n++;
+  const first=!(q in sess.first);if(first)sess.first[q]=g;if(g==="again")sess.agains[q]=(sess.agains[q]||0)+1;sess.n++;
   if(!isRev(q)&&!c&&!sess.fresh.includes(q))sess.fresh.push(q);
   goalNote=false;
   const reset=()=>{state.days[t]=(state.days[t]||0)+1;if(goalN()&&state.days[t]===goalN())goalNote=true;flipped=false;cardEx=null;exErr="";revTyped="";nuOpen=null;save();renderCards();renderList()};
   // もう一度モード：覚え具合（次に出る日）は変えない。浮かばなかったら少しあとにもう一度
-  if(cram){if(g==="again")queue.splice(Math.min(3,queue.length),0,q);else sessionDone++;reset();return}
+  // テスト範囲モード：その回の最初の答えだけ、ふつうのカードと同じように覚え具合に反映する（新しい単語もふつうの復習に入る）
+  if(cram){if(cramTest&&first&&!isRev(q)){store[id]=applyAnswer(c||{seen:0},g==="good",t);ensureRev();ratioFresh=ratioFresh.filter(x=>x!==id)}
+    if(g==="again")queue.splice(Math.min(3,queue.length),0,q);else sessionDone++;reset();return}
   store[id]=applyAnswer(c||{seen:0},g==="good",t);
   if(!isRev(q))ensureRev();   // 英→日が BOX 3 まで来たら日→英カードを作る
   ratioFresh=ratioFresh.filter(x=>x!==id);ratioRecent=[id].concat(ratioRecent).slice(0,8);ratioMsg="";
@@ -1522,9 +1552,11 @@ function renderQuickbar(){const el=$("#quickbar");if(!el)return;if(typeof render
   el.hidden=!helloDone&&!Object.keys(state.cards).length;   // 初回の案内の間は出さない
   const lv=state.levels.map(l=>LEVELS[l].name).join("・"),th=state.themes.length===THEME_KEYS.length?"":"テーマ"+state.themes.length+"つ";   // スマホで2行に収まるよう短く
   el.innerHTML=`<button class="qb qt" type="button" id="qtBtn" ${qt?'aria-pressed="true"':""}>⏱ ${qt?"3分 実行中":"3分だけ"}</button>`
+    +`<button class="qb" type="button" id="qbTest">📷 テスト範囲</button>`
     +`<button class="qb" type="button" data-open="lvBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg>レベル・テーマ<small>${esc(lv)}${th?" ／ "+th:""}</small></button>`;
   el.querySelectorAll("[data-open]").forEach(b=>{b.setAttribute("aria-expanded",String(qbOpen===b.dataset.open));b.onclick=()=>openPanel(b.dataset.open)});
   // 押したらすぐ始めず、スタートの画面を出す
+  $("#qbTest").onclick=()=>{closeDrawer();showTab("words");$("#testBox").open=true;renderTlSaved();$("#testBox").scrollIntoView({block:"start"})};
   $("#qtBtn").onclick=()=>{closeDrawer();if(!qt){qtReady=true;renderCards()}window.scrollTo(0,0)};
 }
 let setDraft=null;
@@ -3183,6 +3215,71 @@ async function deliverReport(it){
   }
   return {ok,r};
 }
+/* テスト範囲（2026-10-29。「学校で配られる単語帳の写真を送ると、試験範囲の単語を自動で追加して組んでくれたら」と言われて）：
+   写真（GitHub 版だけ。Tesseract.js でこの端末の中で英語だけ読み取る。写真はどこにも送らない）か、打ち込んだ単語のリストから、
+   アプリの単語（BASE と自分で追加した単語）と照らし合わせる → 見つかった単語を選んで「この範囲を練習する」→ state.tests に保存してテスト範囲モード。
+   アプリにない語は一覧にして、自分で追加かリクエストへ */
+const OCR_JS="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const TL_STOP=new Set("the a an of to in on at for and or but is are was were be been it this that these those with by from as i you he she we they my your his her our their me him us them not no yes do does did have has had will would can could should may might must shall so if then than there here what which who when where why how all any some each other such only own same too very just also into over under up down out about after before again more most no nor once off further during while until because both few many much page unit test day week lesson word words name class number score date sentence meaning example".split(" "));
+let tlFound=null;
+function tlMatch(raw){
+  let text=" "+String(raw).toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z' -]+/g," ").replace(/\s+/g," ")+" ";
+  const ws=allWords(),byLow=new Map();ws.forEach(w=>{const k=w.w.toLowerCase();if(!byLow.has(k))byLow.set(k,w)});
+  const found=new Map(),used=new Set();
+  // 熟語（2語以上）を先に探す
+  // 見つかった熟語は文から消して、中の語（vending machine の machine など）を別に数えないようにする
+  ws.filter(w=>/\s/.test(w.w)).sort((a,b)=>b.w.length-a.w.length).forEach(w=>{const k=" "+w.w.toLowerCase()+" ";if(text.includes(k)){found.set(w.id,w);text=text.split(k).join("  ")}});
+  const toks=text.trim().split(" ").map(t=>t.replace(/^['-]+|['-]+$/g,"")).filter(Boolean);
+  const miss=new Set();
+  toks.forEach(t=>{const w=byLow.get(t)||byLow.get(t.replace(/s$/,""))||byLow.get(t.replace(/es$/,""))||byLow.get(t.replace(/ies$/,"y"));
+    if(w){found.set(w.id,w);return}
+    if(t.length>=3&&!TL_STOP.has(t)&&!used.has(t)&&/^[a-z][a-z'-]*[a-z]$/.test(t))miss.add(t)});
+  return {found:[...found.values()],miss:[...miss].slice(0,40)};
+}
+function renderTlResult(){const box=$("#tlResult");if(!tlFound){box.innerHTML="";return}
+  const {found,miss}=tlFound,d=new Date();
+  box.innerHTML=found.length?`<div class="label" style="margin-top:6px">アプリにある単語（${found.length}語）</div>
+    <div class="note" style="margin:0">練習したい単語にチェック。意味・例文・発音記号はアプリのものを使います。</div>
+    <div class="tlgrid">${found.map(w=>`<label class="tlrow"><input type="checkbox" data-tl="${esc(w.id)}" checked><b>${esc(w.w)}</b><span>${esc(w.ja)}</span>${LEVELS[w.lv]?`<small class="lvchip">${LEVELS[w.lv].name}</small>`:""}</label>`).join("")}</div>
+    <input type="text" id="tlName" maxlength="30" value="テスト範囲 ${d.getMonth()+1}/${d.getDate()}" aria-label="範囲の名前">
+    <button class="btn primary" id="tlGo" type="button" style="align-self:flex-start">この範囲を練習する</button>`
+    :`<div class="note">アプリにある単語は見つかりませんでした。</div>`;
+  if(miss.length)box.innerHTML+=`<details class="tlmiss"><summary>アプリにない語（${miss.length}）<small>読みまちがいも入っているかもしれません</small></summary>
+    <div class="note" style="margin:0">押すと「＋ 単語を追加」に入ります（意味は自分で入れてください）。みんなのカードに入れてほしい語は「単語のリクエスト」へ。</div>
+    <div class="dfchips">${miss.map(t=>`<button type="button" data-tlm="${esc(t)}">${esc(t)}</button>`).join("")}</div></details>`;
+  const go=$("#tlGo");if(go)go.onclick=()=>{const ids=[...box.querySelectorAll("[data-tl]:checked")].map(x=>x.dataset.tl);
+    if(!ids.length){$("#tlMsg").textContent="単語を1つ以上選んでください。";return}
+    const t={id:"t"+Date.now().toString(36),name:($("#tlName").value.trim()||"テスト範囲").slice(0,30),ids,at:Date.now()};
+    state.tests=mergeTests([t],state.tests);save();logEvent("feature","テスト範囲:"+ids.length+"語");tlFound=null;renderTlResult();renderTlSaved();startTest(t)};
+  box.querySelectorAll("[data-tlm]").forEach(b=>b.onclick=()=>{$("#addBox").open=true;$("#fW").value=b.dataset.tlm;$("#fJa").value="";$("#addBox").scrollIntoView({behavior:"smooth",block:"start"});$("#fJa").focus()});
+}
+function renderTlSaved(){const el=$("#tlSaved");const ts=(state.tests||[]).filter(t=>!t.del);
+  el.innerHTML=ts.length?`<div class="label" style="margin-top:10px">作ったテスト範囲</div>${ts.map(t=>{const n=t.ids.filter(id=>byId(id)).length,m=t.ids.filter(id=>{const w=byId(id);return w&&boxOf(w)>=3}).length;
+    return `<div class="tlsaved"><div><b>${esc(t.name)}</b><small>${n}語 ・ だいたい覚えた ${m}語</small></div><button class="btn" type="button" data-tgo="${t.id}">練習する</button><button class="linkbtn" type="button" data-tdel="${t.id}">消す</button></div>`}).join("")}`:"";
+  el.querySelectorAll("[data-tgo]").forEach(b=>b.onclick=()=>{const t=state.tests.find(x=>x.id===b.dataset.tgo);if(t)startTest(t)});
+  el.querySelectorAll("[data-tdel]").forEach(b=>b.onclick=()=>{const t=state.tests.find(x=>x.id===b.dataset.tdel);if(!t)return;
+    if(b.dataset.sure){t.del=true;t.at=Date.now();save();renderTlSaved()}else{b.dataset.sure="1";b.textContent="本当に消す"}});
+}
+function startTest(t){const ids=t.ids.filter(id=>byId(id));if(!ids.length)return;closeDrawer();
+  if(!helloDone){helloDone=true;try{localStorage.setItem(LS+"-hello","1")}catch(e){}renderQuickbar()}   // 初回の案内より先にテスト範囲を作った人
+  startCram(ids);cramTest={id:t.id,name:t.name};showTab("cards");renderCards();window.scrollTo(0,0)}
+$("#tlRead").onclick=()=>{const v=$("#tlText").value.trim();if(!v){$("#tlMsg").textContent="単語を打ち込むか貼り付けてください。";return}
+  tlFound=tlMatch(v);$("#tlMsg").textContent="";renderTlResult()};
+// 写真：大きい写真は縮めてから読む（速くするため）
+async function ocrRead(file){
+  const msg=$("#tlMsg");msg.textContent="読み取りの準備をしています…";
+  try{if(!window.Tesseract)await loadScript(OCR_JS);
+    const img=await createImageBitmap(file),sc=Math.min(1,2000/Math.max(img.width,img.height)),cv=document.createElement("canvas");
+    cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+    const worker=await Tesseract.createWorker("eng",1,{logger:m=>{if(m.status==="recognizing text")msg.textContent=`読み取っています… ${Math.round((m.progress||0)*100)}%`;else if(/load|init/.test(m.status||""))msg.textContent="読み取りの準備をしています…"}});
+    const {data}=await worker.recognize(cv);await worker.terminate();
+    tlFound=tlMatch(data.text||"");msg.textContent=tlFound.found.length?"":"英語がうまく読み取れませんでした。明るいところで、まっすぐ撮ってみてください。";
+    logEvent("feature","テスト範囲:写真",true);renderTlResult();
+  }catch(e){msg.textContent="読み取れませんでした（電波がないときや、古いブラウザでは使えないことがあります）。単語を打ち込む方法も使えます。"}
+}
+$("#ocrFile").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(f)ocrRead(f)};
+if(ON_CLAUDE)$("#ocrWrap").hidden=true;   // claude.ai の中では外からの読み込みに制限があるので、打ち込む方法だけ
+renderTlSaved();
 /* 単語のリクエスト（2026-10-22。「みんなの辞書みたいな機能があったら」と言われて、まずは品質を守れる「リクエスト」の形にした）：
    使う人が入れてほしい単語を送る → 作った人の「届いた報告・感想」に kind "wordreq" で届く（多い順のまとめも出る）→ Claude が点検して BASE の最後に足す */
 let reqBusy=false;
