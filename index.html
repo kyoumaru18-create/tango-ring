@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.76fb74ad.js" as="script">
+<link rel="preload" href="words.68f88c9b.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -750,7 +750,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.76fb74ad.js"></script>
+<script src="words.68f88c9b.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -2143,7 +2143,7 @@ function renderTalkMode(){
 renderTalkMode();
 
 /* ---------- diff (使い分け) ---------- */
-const DF_PRESET=["借りる","予約","見る","約束","言う","直す","遅い","合う","大丈夫","かける","思う","教える","作る","わかる","会う","着る","待つ","探す"];
+const DF_PRESET=["借りる","予約","見る","約束","言う","直す","遅い","合う","大丈夫","かける","思う","教える","作る","わかる","会う","着る","待つ","探す","ひく"];
 const DF_BUILTIN={"借りる":{summary:"英語では「持ち出すか」「お金を払うか」「その場で使うだけか」で言い分けます。",items:[
  {en:"borrow",pos:"verb",form:"borrow + 物 (+ from 人)",why:"「手元へ持ってくる」動きなので、持ち出して使う物に合う。",when:"無料で借りて、あとで返すとき。物を持っていくイメージ。",image:"一時的に手元へ持ってくる",ex:"Can I borrow your umbrella?",exJa:"傘を借りてもいい？",ng:"お金を払うレンタルには使わない。"},
  {en:"rent",pos:"verb",form:"rent + 物",why:"rent は元々「賃料」。お金が絡む貸し借りにだけ使う。",when:"お金を払って借りるとき（部屋・車・道具など）。",image:"料金を払って使う権利をもらう",ex:"We rented a car in Hawaii.",exJa:"ハワイでレンタカーを借りた。",ng:""},
@@ -2206,6 +2206,17 @@ const DF_BUILTIN={"借りる":{summary:"英語では「持ち出すか」「お�
  {en:"spend",pos:"verb",form:"spend + 時間・お金 (on ~)",why:"時間やお金を「使ってなくす」こと。",when:"時間・お金をかけるとき。",image:"時間・お金を使う",ex:"Don't spend too much time on it.",exJa:"それにあまり時間をかけないで。",ng:""},
  {en:"hang",pos:"verb",form:"hang + 物 (on ~)",why:"上からつるすこと。",when:"コートや絵を壁にかけるとき。",image:"つるす",ex:"Hang your coat here.",exJa:"ここにコートをかけて。",ng:""}],
  tip:"電話→call、眼鏡（かける動作）→put on、眼鏡（かけている）→wear、時間・お金→spend、壁に→hang。"},
+"ひく":{summary:"日本語の「ひく」は、引く・弾く・轢く・挽く・（風邪を）ひく…と、字も意味もばらばらです。英語ではそれぞれまったく別の言葉になります。",items:[
+ {en:"pull",pos:"verb",form:"pull + 物",why:"自分のほうへ「引っぱる」動き。push（押す）の反対。",when:"ドア・ロープ・椅子などを手前に引くとき。",image:"手前に引っぱる",ex:"Pull the door to open it.",exJa:"ドアは引いて開けてください。",ng:"ドアの表示「PULL」は引く、「PUSH」は押す。"},
+ {en:"pull out",pos:"phrase",form:"pull out + 椅子など",why:"「引っぱって、外に出す」。",when:"人のために椅子を引くとき、引き出しを引くとき。",image:"引き出す",ex:"Let me pull out a chair for you.",exJa:"椅子をお引きしますね。",ng:""},
+ {en:"play",pos:"verb",form:"play + (the) 楽器",why:"楽器を「演奏する」。スポーツやゲームをするのも play。",when:"ピアノ・ギターなどを弾くとき。",image:"楽器を演奏する",ex:"Can you play the piano?",exJa:"ピアノを弾けますか？",ng:"楽器の前には the をつけることが多い（play the guitar）。"},
+ {en:"run over",pos:"phrase",form:"run over + 人・動物",why:"車が上を「走って越える」。",when:"車が人や動物をひくとき。",image:"車が上を通る",ex:"Slow down so you don't run over a cat.",exJa:"猫をひかないように速度を落として。",ng:"車にはねられた（ぶつかった）なら be hit by a car が多い。"},
+ {en:"catch",pos:"verb",form:"catch + a cold",why:"病気を「つかまえてしまう」と考える。",when:"風邪をひくとき。",image:"病気をもらう",ex:"Wash your hands so you don't catch a cold.",exJa:"風邪をひかないように手を洗って。",ng:"「風邪をひいている」は have a cold。"},
+ {en:"look up",pos:"phrase",form:"look up + 言葉 (in ~)",why:"辞書やネットで「探して見る」。",when:"辞書を引く・言葉を調べるとき。",image:"調べる",ex:"Look up the word in a dictionary.",exJa:"その言葉を辞書で引いてみて。",ng:"pull a dictionary は×。"},
+ {en:"draw",pos:"verb",form:"draw + 線・図",why:"ペンを「引っぱって」線を描く。",when:"線を引く・図をかくとき。",image:"線をかく",ex:"Draw a line under the word.",exJa:"その単語の下に線を引いて。",ng:""},
+ {en:"subtract",pos:"verb",form:"subtract A from B",why:"数を「取り去る」。",when:"引き算をするとき。",image:"数を引く",ex:"Subtract 3 from 10.",exJa:"10から3を引いて。",ng:"話し言葉では take away もよく使う（10 take away 3 is 7）。"},
+ {en:"grind",pos:"verb",form:"grind + 豆など",why:"細かく「すりつぶす」。",when:"コーヒー豆を挽くとき。",image:"すりつぶす",ex:"I grind the coffee beans every morning.",exJa:"毎朝コーヒー豆を挽いている。",ng:""}],
+ tip:"手前に→pull、椅子を→pull out、楽器→play、車が→run over、風邪→catch、辞書→look up、線→draw、引き算→subtract、豆→grind。"},
 "思う":{summary:"英語では「考え・意見」「感じ」「当て推量」「〜かなあという疑問」で言い分けます。",items:[
  {en:"think",pos:"verb",form:"think (that) 〜",why:"頭で考えた意見・判断。",when:"自分の意見を言うとき。いちばん広く使える。",image:"頭で考える",ex:"I think it's a good idea.",exJa:"いい考えだと思う。",ng:""},
  {en:"feel",pos:"verb",form:"feel (that) 〜 ／ feel like 〜",why:"体や心で感じたこと。",when:"感覚・気持ちとしてそう思うとき。",image:"心で感じる",ex:"I feel like something is wrong.",exJa:"何かおかしい気がする。",ng:"意見をはっきり言う場面では think のほうが合う。"},
