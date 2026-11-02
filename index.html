@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>単語リング</title>
-<link rel="preload" href="words.68f88c9b.js" as="script">
+<link rel="preload" href="words.222295a4.js" as="script">
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -775,7 +775,7 @@ details.flash{animation:flash 1.2s ease}
   </div>
 </dialog>
 
-<script src="words.68f88c9b.js"></script>
+<script src="words.222295a4.js"></script>
 <script>
 
 // テーマ（場面）。単語データの7つ目。自分で追加した単語にはテーマがなく、どのテーマを選んでも出る
@@ -1286,7 +1286,7 @@ function renderHello(area){
     <div class="note">場面（旅行・仕事・買い物など）のしぼり込み、1回の枚数、読み上げの声は、あとでカードの上の<b>「レベル・テーマ」</b>ボタンと、右上の<b>設定ボタン（丸いアイコン）</b>からいつでも変えられます。</div>
     <button class="btn primary" id="helloGo">はじめる</button>
     <div class="note" style="font-size:12px">${ON_CLAUDE?"AIの機能（ニュアンス・使い分け・AI英会話）は、claude.ai にログインして開くと使えます。ログインしていなくても、カード・クイズ・リスニングは使えます。"
-      :`このページでは、AIの機能（ニュアンス・使い分け・AI英会話）は使えません。カード・クイズ・リスニング・文法のコツ・よく使う言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（右上の丸いボタンから Google でログインすると、ほかの端末でも続きができて、消えなくなります）。スマホなら、同じ画面の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
+      :`このページでは、AIの機能（AI英会話など）は使えません。カード・クイズ・リスニング・文法のコツ・接客の練習、よく使う単語のニュアンスと言葉の使い分けは全部使えます。進み具合はこの端末に保存されます（右上の丸いボタンから Google でログインすると、ほかの端末でも続きができて、消えなくなります）。スマホなら、同じ画面の「ホーム画面に追加」でアプリのように使えます。AIも使いたい人は claude.ai 版へ（claude.ai のアカウントが必要です）：${AI_LINK}`}</div>
   </div>`;
   area.querySelectorAll("#helloLv [data-lv]").forEach(b=>b.onclick=()=>{const lv=+b.dataset.lv,on=state.levels.includes(lv);
     if(on&&state.levels.length===1)return;
@@ -1373,7 +1373,7 @@ function renderCards(){
   const ri=$("#revIn");if(ri){ri.oninput=()=>{revTyped=ri.value};ri.onkeydown=e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();flip()}}}
   if(!rev&&!flipped&&state.autoSpeak&&spokenQ!==q&&!$("#tab-cards").hidden){spokenQ=q;speak(w.w,1)}
   area.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>grade(b.dataset.g));
-  const nb=$("#nuBtn");if(nb)nb.onclick=()=>{nuOpen=queue[0];if(nuance[w.id])renderCards();else loadNuance(w)};
+  const nb=$("#nuBtn");if(nb)nb.onclick=()=>{nuOpen=queue[0];if(nuBuilt(w)||nuance[w.id])renderCards();else loadNuance(w)};
   const xb=$("#exBtn");if(xb)xb.onclick=()=>nextEx(w,q);
   const cs=$("#cramStop");if(cs)cs.onclick=()=>{buildQueue();renderCards()};
   const qs=$("#qtStop");if(qs)qs.onclick=()=>{stopQt();sess=newSess();renderCards()};
@@ -1404,16 +1404,19 @@ Reply with only JSON: {"examples":[{"ex":"English sentence","exJa":"natural Japa
 }
 let nuance={};try{nuance=JSON.parse(localStorage.getItem(LS+"-nu2")||"{}")||{}}catch(e){}
 let nuBusy=null,nuErr={},nuOpen=null;  // nuOpen：今のカードで「ニュアンスを見る」を押したか（押すまでは、保存済みでも出さない）
+/* 先に書いて点検したニュアンス（NU_BUILTIN。2026-11-02〜）：AIを使わないので、どの版でも、だれでもすぐ読める。AIの説明より先に使う */
+function nuBuilt(w){const v=w&&w.lv&&NU_BUILTIN[w.w.toLowerCase()];if(!v)return null;
+  return {built:true,core:v.c,scene:"",compare:v.d.map(([word,diff])=>({word,diff})),collocations:v.l.map(([en,ja])=>({en,ja})),patterns:v.p.map(([form,meaning,ex,why])=>({form,meaning,ex,why}))}}
 function nuanceHtml(w){
-  const n=nuOpen===queue[0]?nuance[w.id]:null;
-  if(!n&&!ON_CLAUDE)return "";   // claude.ai の外ではニュアンス（AI）のボタンを出さない
+  const pre=nuBuilt(w),n=nuOpen===queue[0]?(pre||nuance[w.id]):null;
+  if(!n&&!pre&&!ON_CLAUDE)return "";   // claude.ai の外では、先に書いた説明がない単語にボタンを出さない
   if(!n)return `<button class="btn nubtn" id="nuBtn" ${nuBusy===w.id?"disabled":""}>${nuBusy===w.id?"ニュアンスを整理中…":"ニュアンスを見る"}</button>${nuErr[w.id]?`<div class="err">${esc(nuErr[w.id])}</div>`:""}`;
   return `<div class="nu fade">
     <div><div class="label">核のイメージ</div><div class="nucore">${esc(n.core)}</div>${n.scene?`<div class="nuscene">${esc(n.scene)}</div>`:""}</div>
     ${n.patterns&&n.patterns.length?`<div><div class="label">形と意味の仕組み</div>${n.patterns.map(p=>`<div class="pat"><div class="patform">${esc(p.form)}<span>→ ${esc(p.meaning)}</span></div>${p.ex?`<div class="patex">${esc(p.ex)}</div>`:""}${p.why?`<div class="patwhy">${esc(p.why)}</div>`:""}</div>`).join("")}</div>`:""}
     ${n.compare&&n.compare.length?`<div><div class="label">似た単語との違い</div>${n.compare.map(c=>`<div class="nurow"><span class="nuw">${esc(c.word)}</span><span>${esc(c.diff)}</span></div>`).join("")}</div>`:""}
     ${n.collocations&&n.collocations.length?`<div><div class="label">よく一緒に使う形</div>${n.collocations.map(c=>`<div class="nurow"><span class="nuw">${esc(c.en)}</span><span>${esc(c.ja)}</span></div>`).join("")}</div>`:""}
-    <div class="aifoot">${AI_NOTE}${repFoot("nu")}</div>
+    <div class="aifoot">${n.built?"<span></span>":AI_NOTE}${repFoot("nu")}</div>
   </div>`;
 }
 async function loadNuance(w){
@@ -3133,8 +3136,8 @@ const repFoot=t=>`<button class="linkbtn replink" type="button" data-rep="${t}">
 const REP={
   card:()=>{const q=queue[0],w=q&&byId(wid(q));if(!w)return null;const e=(cardEx&&cardEx.e)||{};
     return {kind:"card",reasons:"word",what:`単語：${w.w}（${w.ja}）`,ctx:{id:w.id,word:w.w,pos:w.pos,ja:w.ja,ex:e.ex,exJa:e.exJa,ipa:ipaOf(w),card:isRev(q)?"日→英":"英→日"}}},
-  nu:()=>{const q=queue[0],w=q&&byId(wid(q)),n=w&&nuance[w.id];if(!n)return null;
-    return {kind:"nu",reasons:"ai",what:`ニュアンス（AI）：${w.w}`,ctx:{word:w.w,core:n.core,scene:n.scene,patterns:(n.patterns||[]).map(p=>`${p.form} → ${p.meaning}${p.ex?" / "+p.ex:""}`).join(" | "),compare:(n.compare||[]).map(c=>`${c.word}: ${c.diff}`).join(" | "),collocations:(n.collocations||[]).map(c=>`${c.en}=${c.ja}`).join(" / ")}}},
+  nu:()=>{const q=queue[0],w=q&&byId(wid(q)),n=w&&(nuBuilt(w)||nuance[w.id]);if(!n)return null;
+    return {kind:"nu",reasons:"ai",what:`ニュアンス${n.built?"":"（AI）"}：${w.w}`,ctx:{word:w.w,core:n.core,scene:n.scene,patterns:(n.patterns||[]).map(p=>`${p.form} → ${p.meaning}${p.ex?" / "+p.ex:""}`).join(" | "),compare:(n.compare||[]).map(c=>`${c.word}: ${c.diff}`).join(" | "),collocations:(n.collocations||[]).map(c=>`${c.en}=${c.ja}`).join(" / ")}}},
   quiz:()=>{const q=quiz&&quiz.qs&&quiz.qs[quiz.i];if(!q)return null;const w=q.w;
     return {kind:"quiz",reasons:"quiz",what:`クイズ：${w.w}（${w.ja}）`,ctx:{id:w.id,word:w.w,ja:w.ja,type:{en2ja:"英→日",ja2en:"日→英",cloze:"穴埋め"}[q.type],ex:q.e.ex,exJa:q.e.exJa,choices:q.opts.map(o=>`${o.w}=${o.ja}`).join(" / ")}}},
   listen:()=>{const w=ls.w;if(!w)return null;return {kind:"listen",reasons:"word",what:`リスニング：${w.w}（${w.ja}）`,ctx:{id:w.id,word:w.w,ja:w.ja,ex:ls.e.ex,exJa:ls.e.exJa}}},
@@ -3479,7 +3482,7 @@ window.addEventListener("pagehide",sendStudyToday);
    値段の話はまだしない（アンケートの案は CLAUDE.md の「値段」に保留中） */
 function aiFeatHtml(talk){
   const f=[["AI英会話","カフェ・空港・職場などの場面で、AIと英語で会話できます。あなたの英文には、よかったところと、もっと自然な言い方を返してくれます。日本語で書いたところも英語の言い方を教えてくれて、そのままカードにできます。"],
-    ["ニュアンス","カードの単語の「核のイメージ」や、似た単語との違いを説明します。"],
+    ["ニュアンス","カードの裏で「ニュアンスを見る」を押すと、よく使う単語は今でも読めます。AIなら、どの単語でも「核のイメージ」や似た単語との違いを説明します。"],
     ["使い分け","「借りる」など18語のほかにも、どんな日本語でも英語での言い分けを調べられます。"],
     ["文法の質問","ここに載っていない文法も、ポイント・間違えやすい使い方・確認クイズの形で説明します。"],
     ["例文・単語づくり","カードの例文を増やしたり、好きなテーマで単語カードを作ったりできます。"]];
